@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>CD Shelf · Connect</title><link rel="stylesheet" href="web/connection.css">
+</head>
+<body>
+<main>
+  <header><span class="mark" aria-hidden="true">◉</span><div><h1>CD Shelf</h1><p>Your collection. Back on the shelf.</p></div></header>
+  <section class="panel" aria-labelledby="heading">
+    <span class="eyebrow">MUSIC ASSISTANT EDITION · FIRST PREVIEW</span>
+    <h2 id="heading">Connect to your music</h2>
+    <p>Your albums stay on your NAS. Connect to the Music Assistant server that already plays them.</p>
+    <form id="connection-form">
+      <label for="server">Music Assistant address</label>
+      <input id="server" name="server" type="url" placeholder="http://192.168.1.50:8095" required autocomplete="url" spellcheck="false" aria-describedby="server-help">
+      <small id="server-help">Use Music Assistant’s direct address, usually port 8095—not the Home Assistant sidebar URL.</small>
+      <label for="token">Music Assistant access token</label>
+      <div class="token-row"><input id="token" name="token" type="password" required autocomplete="off" spellcheck="false" aria-describedby="token-help"><button id="reveal" type="button" class="quiet" aria-controls="token" aria-pressed="false">Show</button></div>
+      <small id="token-help">Create a token in Music Assistant’s user/profile settings. This is a Music Assistant token, not a Home Assistant token. Do not share it in GitHub or chat.</small>
+      <label class="check"><input id="remember" type="checkbox"> Keep the token for this browser tab’s session</label>
+      <small>Unchecked: the token stays in memory only. The server address is remembered on this browser.</small>
+      <div class="actions"><button id="connect" type="submit">Connect</button><button id="disconnect" class="quiet" type="button" hidden>Disconnect</button></div>
+    </form>
+    <p id="status" role="status" aria-live="polite">Ready to connect.</p>
+    <section id="connected" hidden aria-labelledby="players-heading">
+      <h3 id="players-heading">Your players</h3><p id="server-detail"></p>
+      <label for="player">Listening room</label><select id="player"></select>
+      <p id="player-detail"></p><button id="refresh" type="button" class="quiet">Refresh players</button>
+      <p class="note">Connection preview only. Album browsing and playback will be added next. Selecting a room here does not start or change playback.</p>
+    </section>
+    <details><summary>Having trouble connecting?</summary><ul>
+      <li>Open the Music Assistant address in another browser tab first to check it is reachable.</li>
+      <li>Use a Music Assistant user token with permission to read players.</li>
+      <li>Allow local-network access if your browser asks. Your screen and server must be able to reach one another.</li>
+      <li>An HTTPS page cannot connect to an insecure HTTP server. Run CD Shelf over local HTTP, or use HTTPS for both.</li>
+    </ul></details>
+  </section>
+  <footer>Inspired by CD Shelf for LMS · ChrisHoppyBot &amp; Joe Leech</footer>
+</main>
+<script type="module" src="web/connection.js"></script>
+</body></html>
