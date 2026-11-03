@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<extension>
+  <name>CDShelf</name>
+  <title lang="EN">CD Shelf</title>
+  <version>0.7.6</version>
+  <creator>ChrisHoppyBot; Joe Leech</creator>
+  <module>Plugins::CDShelf::Plugin</module>
+  <desc lang="EN">A jewel-case style album shelf for Lyrion Music Server. Based on the original CD Shelf concept and code shared by Reddit user ChrisHoppyBot; LMS plugin packaging, Material integration, player selection and UI modifications by Joe Leech.</desc>
+  <optionsURL>plugins/CDShelf/settings/basic.html</optionsURL>
+  <homepageURL>https://github.com/mrj0e/cdshelf</homepageURL>
+  <targetApplication>
+    <id>LogitechMediaServer</id>
+    <minVersion>8.0</minVersion>
+    <maxVersion>9.*</maxVersion>
+  </targetApplication>
+</extension>

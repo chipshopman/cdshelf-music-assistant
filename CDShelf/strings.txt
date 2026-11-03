@@ -1,0 +1,11 @@
+PLUGIN_CDSHELF
+	EN	CD Shelf
+
+PLUGIN_CDSHELF_DESC
+	EN	A private jewel-case style album shelf for Lyrion Music Server.
+
+PLUGIN_CDSHELF_OPEN
+	EN	Open CD Shelf
+
+PLUGIN_CDSHELF_OPEN_DESC
+	EN	Browse your library as a jewel-case CD shelf.

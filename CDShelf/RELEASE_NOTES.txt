@@ -1,0 +1,8 @@
+CD Shelf 0.7.6
+
+- Added an A-Z jump strip above the shelf for fast navigation through large libraries.
+- Letter jumps follow the active sort mode: artist initials when sorted by artist, album initials when sorted by album.
+- Added a # jump for titles beginning with numbers or symbols.
+- Letters with no matching albums are automatically disabled.
+- Retains the 0.7.5 bottom-bar Previous / Play-Pause / Next controls.
+- Volume control and automatic screensaver mode remain removed.
