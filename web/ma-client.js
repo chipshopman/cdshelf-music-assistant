@@ -47,7 +47,8 @@ export class MusicAssistantClient {
   }
   request(command, args = {}) {
     if (!this.socket || this.socket.readyState !== 1) return Promise.reject(new Error('Connect to Music Assistant first.'));
-    const message_id = ++this.sequence;
+    // Music Assistant uses string request IDs; its replies must match our Map keys.
+    const message_id = String(++this.sequence);
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => { this.pending.delete(message_id); reject(new Error('Music Assistant did not respond in time. Try connecting again.')); }, this.timeout);
       this.pending.set(message_id, { resolve, reject, timer, chunks: [] });
@@ -57,13 +58,14 @@ export class MusicAssistantClient {
   }
   receive(event) {
     let data; try { data = JSON.parse(event.data); } catch { return; }
-    const entry = this.pending.get(data.message_id); if (!entry) return;
+    const message_id = String(data.message_id);
+    const entry = this.pending.get(message_id); if (!entry) return;
     if (data.error_code !== undefined) {
-      clearTimeout(entry.timer); this.pending.delete(data.message_id);
+      clearTimeout(entry.timer); this.pending.delete(message_id);
       entry.reject(new Error('Music Assistant rejected the request. Check that your token is valid and has permission to read players.')); return;
     }
     if (data.partial) { entry.chunks.push(...(Array.isArray(data.result) ? data.result : [data.result])); return; }
-    clearTimeout(entry.timer); this.pending.delete(data.message_id);
+    clearTimeout(entry.timer); this.pending.delete(message_id);
     entry.resolve(entry.chunks.length ? [...entry.chunks, ...(Array.isArray(data.result) ? data.result : [data.result])] : data.result);
   }
   players() { return this.request('players/all'); }
