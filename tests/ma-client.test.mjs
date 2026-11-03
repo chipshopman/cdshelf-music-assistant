@@ -11,7 +11,7 @@ class FakeSocket {
   send(raw) {
     const msg = JSON.parse(raw); this.sent.push(msg);
     const result = msg.command === 'auth' ? { authenticated: true } : [{ player_id: 'onkyo', name: 'Onkyo', available: true }];
-    const response = msg.command === 'auth' && FakeSocket.rejectAuth ? { message_id: msg.message_id, error_code: 20, details: 'sensitive server detail' } : { message_id: msg.message_id, result };
+    const response = msg.command === 'auth' && FakeSocket.rejectAuth ? { message_id: String(msg.message_id), error_code: 20, details: 'sensitive server detail' } : { message_id: String(msg.message_id), result };
     queueMicrotask(() => this.onmessage?.({ data: JSON.stringify(response) }));
   }
   close() { this.readyState = 3; this.onclose?.(); }
@@ -24,17 +24,18 @@ test('normalises direct addresses and rejects unsafe or wrong endpoints', () => 
   assert.throws(() => websocketAddress('http://host:8095', 'https:'), /HTTPS/);
 });
 test('authenticates before listing players; token never enters URL; no playback calls', async () => {
-  const client = new MusicAssistantClient({ WebSocketImpl: FakeSocket });
+  const client = new MusicAssistantClient({ WebSocketImpl: FakeSocket, timeout: 50 });
   assert.equal((await client.connect('http://host:8095', ' secret ')).server_version, '2.10.9');
   assert.equal((await client.players())[0].player_id, 'onkyo');
   const socket = FakeSocket.instances.at(-1);
   assert.equal(socket.url, 'ws://host:8095/ws');
   assert.deepEqual(socket.sent.map(m => m.command), ['auth', 'players/all']);
+  assert.equal(typeof socket.sent[0].message_id, 'string');
   assert.equal(socket.sent[0].args.token, 'secret'); client.disconnect();
 });
 test('auth rejection closes socket without exposing server details or token', async () => {
   FakeSocket.rejectAuth = true;
-  const client = new MusicAssistantClient({ WebSocketImpl: FakeSocket });
+  const client = new MusicAssistantClient({ WebSocketImpl: FakeSocket, timeout: 50 });
   try { await assert.rejects(client.connect('http://host', 'private-token'), error => !error.message.includes('private-token') && !error.message.includes('sensitive') && /rejected/.test(error.message)); }
   finally { FakeSocket.rejectAuth = false; }
   assert.equal(FakeSocket.instances.at(-1).readyState, 3);
