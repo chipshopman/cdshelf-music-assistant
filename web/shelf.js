@@ -8,16 +8,16 @@ export class AlbumShelf {
     this.client = client; this.getPlayer = getPlayer; this.albums = []; this.filtered = [];
     this.page = 0; this.generation = 0; this.selectionGeneration = 0; this.selected = null; this.playingRequest = false;
     $('album-search').oninput = () => this.filter(); $('album-sort').onchange = () => this.filter();
-    $('reload-albums').onclick = () => this.load(this.address);
+    $('reload-albums').onclick = () => this.load(this.address, { artworkBase: this.artworkBase });
     $('previous-shelf').onclick = () => { this.page--; this.render(); };
     $('next-shelf').onclick = () => { this.page++; this.render(); };
     $('close-album').onclick = () => this.closeAlbum();
     $('play-album').onclick = () => this.play();
     $('spine-frame').onkeydown = event => { if (event.key === 'Escape') this.closeAlbum(); };
   }
-  async load(address) {
+  async load(address, { artworkBase = null } = {}) {
     this.client.clearTrackCache();
-    const generation = ++this.generation; this.address = address;
+    const generation = ++this.generation; this.address = address; this.artworkBase = artworkBase;
     this.closeAlbum(); this.albums = []; this.filtered = []; this.page = 0;
     $('rack').replaceChildren(); $('alphabet').replaceChildren(); $('shelf-empty').hidden = true;
     $('shelf').hidden = false; document.body.classList.add('has-shelf');
@@ -84,7 +84,7 @@ export class AlbumShelf {
     const title = `${artistName(album)} — ${album.name || 'Untitled album'}${album.version ? ` (${album.version})` : ''}`;
     const spine = node('button', 'face-spine'); spine.type = 'button'; spine.title = title;
     spine.setAttribute('aria-label', `Open ${title}`); spine.setAttribute('aria-expanded', 'false');
-    const thumbnail = artworkUrl(album, this.address, 160); const coverUrl = artworkUrl(album, this.address, 512);
+    const thumbnail = artworkUrl(album, this.address, 160, this.artworkBase); const coverUrl = artworkUrl(album, this.address, 512, this.artworkBase);
     if (thumbnail) { const img = node('img'); img.src = thumbnail; img.loading = 'lazy'; img.alt = ''; img.onerror = () => img.remove(); spine.append(img); }
     spine.append(node('span', 'spine-text', title), node('span', 'spine-glass-overlay'));
     const cover = node('div', 'face-cover-container'); cover.setAttribute('aria-hidden', 'true'); cover.inert = true;

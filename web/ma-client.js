@@ -1,3 +1,10 @@
+// Preserve Home Assistant's per-installation Ingress prefix for every request.
+export function managedEndpoints(baseURI) {
+  const socket = new URL('api/ws', baseURI);
+  socket.protocol = socket.protocol === 'https:' ? 'wss:' : 'ws:';
+  return { socket: socket.href, artwork: new URL('api/imageproxy/', baseURI).href };
+}
+
 export function websocketAddress(value, pageProtocol = '') {
   const url = new URL(value.trim());
   if (!['http:', 'https:', 'ws:', 'wss:'].includes(url.protocol)) throw new Error('Use an http:// or https:// Music Assistant address.');
@@ -18,9 +25,16 @@ export class MusicAssistantClient {
     this.pending = new Map(); this.sequence = 0; this.socket = null;
   }
   async connect(address, token, pageProtocol = '') {
+    this.managed = false;
+    if (!token?.trim()) { this.disconnect(); throw new Error('Enter a Music Assistant access token.'); }
+    return this.openSocket(websocketAddress(address, pageProtocol), { token: token.trim() });
+  }
+  async connectManaged(endpoint) {
+    this.managed = true;
+    return this.openSocket(endpoint, null);
+  }
+  async openSocket(endpoint, authArgs) {
     this.disconnect();
-    if (!token?.trim()) throw new Error('Enter a Music Assistant access token.');
-    const endpoint = websocketAddress(address, pageProtocol);
     const socket = this.socket = new this.WebSocketImpl(endpoint);
     try {
       const info = await new Promise((resolve, reject) => {
@@ -43,7 +57,8 @@ export class MusicAssistantClient {
         this.rejectPending(new Error('Music Assistant disconnected. Connect again to continue.'));
         this.onDisconnect();
       };
-      await this.request('auth', { token: token.trim() });
+      if (info.managed_error) throw new Error(info.managed_error);
+      if (authArgs) await this.request('auth', authArgs);
       return info;
     } catch (error) { this.disconnect(); throw error; }
   }
@@ -65,7 +80,7 @@ export class MusicAssistantClient {
     if (data.error_code !== undefined) {
       clearTimeout(entry.timer); this.pending.delete(message_id);
       const action = entry.command === 'auth' ? 'sign-in' : entry.command.startsWith('music/') ? 'library request' : entry.command.startsWith('player_queues/') ? 'playback request' : 'player request';
-      entry.reject(new Error(`Music Assistant rejected the ${action}. Check that your token is valid and has the required library, player or playback permissions.`)); return;
+      entry.reject(new Error(this.managed ? `Music Assistant rejected the ${action}. Ask the administrator to check the app’s Music Assistant token and permissions.` : `Music Assistant rejected the ${action}. Check that your token is valid and has the required library, player or playback permissions.`)); return;
     }
     if (data.partial) { entry.chunks.push(...(Array.isArray(data.result) ? data.result : [data.result])); return; }
     clearTimeout(entry.timer); this.pending.delete(message_id);

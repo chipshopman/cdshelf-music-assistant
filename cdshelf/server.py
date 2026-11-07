@@ -1,0 +1,231 @@
+"""Ingress-only CD Shelf server; Music Assistant credentials never leave this process."""
+import asyncio
+import json
+import logging
+from pathlib import Path
+import re
+from urllib.parse import urlsplit, urlunsplit
+
+from aiohttp import ClientSession, ClientTimeout, WSMsgType, web
+
+ROOT = Path(__file__).parent / 'www'
+MAX_MESSAGE = 8 * 1024 * 1024
+ALLOWED = {
+    'players/all': set(),
+    'music/albums/library_items': {'offset', 'limit', 'order_by', 'summary'},
+    'music/albums/album_tracks': {'item_id', 'provider_instance_id_or_domain'},
+    'player_queues/get_active_queue': {'player_id'},
+    'player_queues/play_media': {'queue_id', 'media', 'option', 'shuffle'},
+}
+
+
+def server_address(value):
+    """Accept only an administrator-configured direct server base address."""
+    try:
+        url = urlsplit(value.strip())
+        if (url.scheme not in ('http', 'https') or not url.hostname or url.username
+                or url.password or url.query or url.fragment or url.path not in ('', '/')):
+            raise ValueError
+        _ = url.port
+        return urlunsplit((url.scheme, url.netloc, '', '', ''))
+    except (ValueError, AttributeError):
+        raise ValueError('Set music_assistant_url to the direct http:// or https:// server address.') from None
+
+
+def create_app(options, *, allowed_peers=frozenset({'172.30.32.2'}), root=ROOT):
+    # Peer address is the TCP peer, never a browser-supplied forwarding header.
+    @web.middleware
+    async def ingress_only(request, handler):
+        if request.remote not in allowed_peers:
+            raise web.HTTPForbidden(text='Open CD Shelf through Home Assistant.')
+        return await handler(request)
+
+    @web.middleware
+    async def response_headers(request, handler):
+        response = await handler(request)
+        if not response.prepared:
+            response.headers['X-Content-Type-Options'] = 'nosniff'
+            response.headers['Referrer-Policy'] = 'same-origin'
+            if not request.path.startswith('/api/imageproxy/'):
+                response.headers['Cache-Control'] = 'no-store'
+        return response
+
+    app = web.Application(middlewares=[ingress_only, response_headers], client_max_size=65536)
+    # Captured server-side only: no route serialises options or reads arbitrary files.
+    try:
+        base = server_address(options.get('music_assistant_url', ''))
+        token = options.get('music_assistant_token', '').strip()
+        if not token:
+            raise ValueError('Set music_assistant_token in the CD Shelf app configuration.')
+        config_error = None
+    except (ValueError, AttributeError):
+        base, token = '', ''
+        config_error = 'Ask the administrator to set the Music Assistant address and token in the CD Shelf app configuration, then restart it.'
+
+    session = None
+    sockets = set()
+
+    async def lifecycle(_app):
+        nonlocal session
+        session = ClientSession(timeout=ClientTimeout(total=20, sock_connect=10), trust_env=False)
+        yield
+        for socket in list(sockets):
+            await socket.close(code=1001, message=b'App stopping')
+        await session.close()
+
+    app.cleanup_ctx.append(lifecycle)
+
+    async def index(request):
+        # Only the mode flag is inserted; no options, address or token are in HTML.
+        html = (root / 'index.html').read_text().replace('<body>', '<body data-managed="true">', 1)
+        return web.Response(text=html, content_type='text/html')
+
+    async def static(request):
+        name = request.match_info['name']
+        if name not in {'connection.js', 'connection.css', 'shelf.js', 'shelf.css', 'ma-client.js', 'library.js'}:
+            raise web.HTTPNotFound()
+        return web.FileResponse(root / 'web' / name)
+
+    async def bridge(request):
+        browser = web.WebSocketResponse(heartbeat=30, max_msg_size=65536)
+        await browser.prepare(request)
+        sockets.add(browser)
+        upstream = None
+        tasks = []
+        ready = False
+        pending = set()
+        try:
+            if config_error:
+                raise ValueError(config_error)
+            endpoint = ('wss' if base.startswith('https:') else 'ws') + base[base.index(':'):] + '/ws'
+            async with asyncio.timeout(10):
+                upstream = await session.ws_connect(endpoint, heartbeat=30, max_msg_size=MAX_MESSAGE)
+                greeting = await upstream.receive_json()
+                if not isinstance(greeting, dict) or not greeting.get('server_version'):
+                    raise ValueError('Music Assistant did not send a valid greeting.')
+                await upstream.send_json({'message_id': 'cdshelf-auth', 'command': 'auth', 'args': {'token': token}})
+                while True:
+                    auth = await upstream.receive_json()
+                    if auth.get('message_id') == 'cdshelf-auth':
+                        break
+                if 'error_code' in auth or not (auth.get('result') or {}).get('authenticated'):
+                    raise ValueError('Music Assistant rejected the saved token. Ask the administrator to update it in the CD Shelf app configuration and restart the app.')
+            # Do not forward the authentication result/user object or upstream events.
+            await browser.send_json({'server_version': greeting['server_version']})
+            ready = True
+
+            async def from_browser():
+                async for msg in browser:
+                    if msg.type != WSMsgType.TEXT:
+                        continue
+                    try:
+                        data = json.loads(msg.data)
+                        message_id = data.get('message_id')
+                        command = data.get('command')
+                        args = data.get('args', {})
+                        if (not isinstance(message_id, str) or not 0 < len(message_id) <= 100
+                                or message_id == 'cdshelf-auth' or message_id in pending
+                                or command not in ALLOWED or not isinstance(args, dict)
+                                or set(args) - ALLOWED[command] or len(pending) >= 64):
+                            raise ValueError
+                        # Playback supports only the explicit album/replace action in this UI.
+                        if command == 'player_queues/play_media' and (
+                            args.get('option') != 'replace' or args.get('shuffle') is not False
+                            or not isinstance(args.get('media'), str)
+                        ):
+                            raise ValueError
+                        pending.add(message_id)
+                        await upstream.send_json({'message_id': message_id, 'command': command, 'args': args})
+                    except (ValueError, TypeError, AttributeError):
+                        await browser.close(code=1008, message=b'Unsupported request')
+                        return
+
+            async def from_server():
+                async for msg in upstream:
+                    if msg.type != WSMsgType.TEXT:
+                        continue
+                    data = json.loads(msg.data)
+                    message_id = str(data.get('message_id', ''))
+                    if message_id not in pending:
+                        continue
+                    if not data.get('partial'):
+                        pending.discard(message_id)
+                    if 'error_code' in data:
+                        await browser.send_json({'message_id': message_id, 'error_code': 999})
+                    else:
+                        await browser.send_json({'message_id': message_id, 'result': data.get('result'), 'partial': bool(data.get('partial'))})
+
+            tasks = [asyncio.create_task(from_browser()), asyncio.create_task(from_server())]
+            done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)
+            for task in done:
+                task.result()
+        except asyncio.CancelledError:
+            raise
+        except Exception as error:
+            # Never log upstream bodies, URLs, headers or exception text containing credentials.
+            logging.getLogger(__name__).warning('Music Assistant connection failed (%s).', type(error).__name__)
+            if not ready and not browser.closed:
+                message = str(error) if isinstance(error, ValueError) else 'Cannot reach Music Assistant. Check its address and availability in the CD Shelf app configuration.'
+                # ValueErrors from upstream JSON parsing are not user-facing text.
+                safe_messages = [config_error, 'Music Assistant did not send a valid greeting.', 'Music Assistant rejected the saved token. Ask the administrator to update it in the CD Shelf app configuration and restart the app.']
+                if message not in safe_messages:
+                    message = 'Cannot reach Music Assistant. Check its address and availability in the CD Shelf app configuration.'
+                await browser.send_json({'server_version': 'unavailable', 'managed_error': message})
+        finally:
+            for task in tasks:
+                task.cancel()
+            if tasks:
+                await asyncio.gather(*tasks, return_exceptions=True)
+            if upstream:
+                await upstream.close()
+            await browser.close()
+            sockets.discard(browser)
+        return browser
+
+    async def artwork(request):
+        if config_error:
+            raise web.HTTPServiceUnavailable()
+        image_id = request.match_info['image_id']
+        size = request.query.get('size', '512')
+        if not re.fullmatch(r'[a-fA-F0-9]{64}', image_id) or size not in {'0', '80', '160', '256', '512', '1024'}:
+            raise web.HTTPBadRequest()
+        try:
+            async with session.get(f'{base}/imageproxy/{image_id}', params={'size': size},
+                                   headers={'Authorization': f'Bearer {token}'}, allow_redirects=False) as response:
+                if response.status != 200 or not response.content_type.startswith('image/'):
+                    raise web.HTTPNotFound()
+                # Bound memory even for chunked responses.
+                image = bytearray()
+                async for chunk in response.content.iter_chunked(65536):
+                    image.extend(chunk)
+                    if len(image) > 10 * 1024 * 1024:
+                        raise web.HTTPBadGateway()
+                return web.Response(body=bytes(image), headers={
+                    'Content-Type': response.headers['Content-Type'],
+                    'Cache-Control': 'private, max-age=3600',
+                })
+        except web.HTTPException:
+            raise
+        except Exception:
+            raise web.HTTPBadGateway(text='Artwork unavailable.') from None
+
+    app.router.add_get('/', index)
+    app.router.add_get('/index.html', index)
+    app.router.add_get('/web/{name}', static)
+    app.router.add_get('/api/ws', bridge)
+    app.router.add_get('/api/imageproxy/{image_id}', artwork)
+    return app
+
+
+def main():
+    logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
+    try:
+        options = json.loads(Path('/data/options.json').read_text())
+    except (OSError, ValueError):
+        options = {}
+    # No host port is published. Only the Supervisor Ingress proxy is accepted.
+    web.run_app(create_app(options), host='0.0.0.0', port=8099, access_log=None, print=None)
+
+
+if __name__ == '__main__':
+    main()

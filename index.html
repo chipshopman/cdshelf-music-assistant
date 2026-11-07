@@ -32,7 +32,9 @@
   <section class="panel" aria-labelledby="heading">
     <span class="eyebrow">MUSIC ASSISTANT EDITION · SHELF PREVIEW</span>
     <h2 id="heading">CD Shelf connection</h2>
-    <p>Your albums stay on your NAS. Connect to the Music Assistant server that already plays them.</p>
+    <p id="connection-intro">Your albums stay on your NAS. Connect to the Music Assistant server that already plays them.</p>
+    <p id="managed-help" hidden>The connection is configured centrally in Home Assistant. Everyone can open the collection without entering a Music Assistant token.</p>
+    <button id="managed-reconnect" class="quiet" type="button" hidden>Reconnect</button>
     <form id="connection-form">
       <label for="server">Music Assistant address</label>
       <input id="server" name="server" type="url" placeholder="http://192.168.1.50:8095" required autocomplete="url" spellcheck="false" aria-describedby="server-help">

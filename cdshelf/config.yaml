@@ -1,0 +1,23 @@
+name: CD Shelf
+version: "0.1.0"
+slug: cdshelf
+description: Browse your Music Assistant albums as a touch-friendly CD shelf
+url: https://github.com/chipshopman/cdshelf-music-assistant
+arch:
+  - amd64
+  - aarch64
+startup: application
+boot: auto
+stage: experimental
+init: true
+ingress: true
+ingress_port: 8099
+panel_icon: mdi:album
+panel_title: CD Shelf
+panel_admin: false
+options:
+  music_assistant_url: ""
+  music_assistant_token: ""
+schema:
+  music_assistant_url: str
+  music_assistant_token: password

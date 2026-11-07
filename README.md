@@ -2,6 +2,16 @@
 
 A Music Assistant adaptation of CD Shelf, targeting server **2.10.9**.
 
+## Home Assistant app/add-on — first experimental release
+
+**Version 0.1.0** runs CD Shelf on your Home Assistant OS machine and opens from its sidebar. An administrator enters the Music Assistant address and token once in the app's Configuration tab. Other users simply open CD Shelf; the backend handles authentication and cover artwork without sending the token to browsers.
+
+[Add this repository to Home Assistant](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fchipshopman%2Fcdshelf-music-assistant), then install **CD Shelf**.
+
+**[Home Assistant installation and configuration](cdshelf/DOCS.md)**
+
+The frontend and backend tests pass locally. A Docker image build and installation on a real Home Assistant OS machine still need verification; keep your working PC version while testing this first package. The add-on is built locally by Supervisor; no pre-published CD Shelf image is needed.
+
 ## Shelf preview
 
 The root `index.html` connects to your Music Assistant server and displays your library as a shelf of CD spines. Swipe or scroll along the shelf, tap a spine to pull out the cover and view the track list, then select **Play album** to play through the chosen room. Playback replaces that room's queue and starts the album in track order.
@@ -47,4 +57,6 @@ The extracted **0.7.6** LMS source is in `CDShelf/`. It requires Lyrion Music Se
 
 ## Development checks
 
-Run `npm test` with Node.js 20+. No dependency installation is required. Tests cover the string-ID connection regression, paginated libraries, missing artwork, search and playback targeting. These use simulated responses; real library/artwork/playback verification against Steve's server is still required.
+Run `npm run prepare-addon` after frontend changes so the Home Assistant package stays in sync. Run `npm test` with Node.js 20+. No dependency installation is required. Tests cover the string-ID connection regression, paginated libraries, missing artwork, search and playback targeting. These use simulated responses; real library/artwork/playback verification against Steve's server is still required.
+
+Backend checks use Python 3.12+ and the dependency in `cdshelf/requirements.txt`: `python -m unittest discover -s tests -p 'test_*.py' -v`. They cover real local HTTP/WebSockets, server-only authentication, restricted commands, concurrent screens, partial results, artwork, disconnected upstreams and Ingress peer enforcement.

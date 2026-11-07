@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>CD Shelf · Your collection</title><link rel="stylesheet" href="web/connection.css"><link rel="stylesheet" href="web/shelf.css">
+</head>
+<body>
+<main>
+  <header><span class="mark" aria-hidden="true">◉</span><div><h1>CD Shelf</h1><p>Your collection. Back on the shelf.</p></div></header>
+<section id="shelf" hidden aria-labelledby="shelf-heading">
+  <div class="shelf-heading"><div><span class="eyebrow">YOUR MUSIC, WITH A LITTLE MORE SOUL</span><h2 id="shelf-heading">The collection</h2></div><button id="reload-albums" class="quiet" type="button">Refresh albums</button></div>
+  <div class="shelf-tools"><div><label for="album-search">Find an album or artist</label><input id="album-search" type="search" placeholder="Search your collection…"></div><div><label for="album-sort">Shelf order</label><select id="album-sort"><option value="artist">Artist, then album</option><option value="title">Album title</option></select></div></div>
+  <p id="library-status" role="status" aria-live="polite"></p>
+  <nav id="alphabet" aria-label="Jump along the shelf"></nav>
+  <div id="spine-frame" tabindex="0" aria-label="CD shelf. Swipe or scroll horizontally; tab to an album and press Enter to open it."><div id="rack"></div></div>
+  <p id="shelf-empty" hidden></p>
+  <div class="shelf-controls">
+    <div class="album-actions"><button id="play-album" type="button" disabled>Play album</button><button id="close-album" class="quiet" type="button" disabled>Put back</button></div>
+    <nav class="shelf-paging" aria-label="Collection pages"><button id="previous-shelf" class="quiet" type="button">Previous shelf</button><span id="shelf-page"></span><button id="next-shelf" class="quiet" type="button">Next shelf</button></nav>
+    <div class="device-picker"><label for="player">Play on</label><select id="player" disabled aria-label="Device to stream to"></select></div>
+  </div>
+  <p class="shelf-help">Swipe the spines or use the scrollbar. Tap a spine to pull out its cover. Spines are recreated from cover artwork and album titles.</p>
+</section>
+<div class="below-shelf">
+  <section id="album-detail" hidden aria-labelledby="album-title">
+    <div class="album-heading"><div><p id="album-artist"></p><h3 id="album-title"></h3><p id="album-version"></p></div></div>
+    <p id="play-destination"></p>
+    <p class="queue-note">Play album replaces the selected room’s current queue and plays the album in track order.</p>
+    <p id="play-status" role="status" aria-live="polite"></p>
+    <h4>Track listing</h4><p id="tracks-status" role="status"></p><ol id="album-tracks"></ol>
+  </section>
+  <section class="panel" aria-labelledby="heading">
+    <span class="eyebrow">MUSIC ASSISTANT EDITION · SHELF PREVIEW</span>
+    <h2 id="heading">CD Shelf connection</h2>
+    <p id="connection-intro">Your albums stay on your NAS. Connect to the Music Assistant server that already plays them.</p>
+    <p id="managed-help" hidden>The connection is configured centrally in Home Assistant. Everyone can open the collection without entering a Music Assistant token.</p>
+    <button id="managed-reconnect" class="quiet" type="button" hidden>Reconnect</button>
+    <form id="connection-form">
+      <label for="server">Music Assistant address</label>
+      <input id="server" name="server" type="url" placeholder="http://192.168.1.50:8095" required autocomplete="url" spellcheck="false" aria-describedby="server-help">
+      <small id="server-help">Use Music Assistant’s direct address, usually port 8095—not the Home Assistant sidebar URL.</small>
+      <label for="token">Music Assistant access token</label>
+      <div class="token-row"><input id="token" name="token" type="password" required autocomplete="off" spellcheck="false" aria-describedby="token-help"><button id="reveal" type="button" class="quiet" aria-controls="token" aria-pressed="false">Show</button></div>
+      <small id="token-help">Create a token in Music Assistant’s user/profile settings. This is a Music Assistant token, not a Home Assistant token. Do not share it in GitHub or chat.</small>
+      <label class="check"><input id="remember" type="checkbox" checked> Remember this device and connect automatically</label>
+      <small>Saves the token in this browser on this device. Uncheck for a shared device; the token then stays in memory only.</small>
+      <div class="actions"><button id="connect" type="submit">Connect</button></div>
+    </form>
+    <p id="status" role="status" aria-live="polite">Ready to connect.</p>
+    <section id="connected" hidden aria-labelledby="players-heading">
+      <h3 id="players-heading">Your players</h3><p id="server-detail"></p>
+      <p id="player-detail"></p><button id="refresh" type="button" class="quiet">Refresh players</button>
+      <p class="note">Choose the room you want to play in, then browse your collection above. Playback starts only when you press Play album.</p>
+      <div class="actions"><button id="disconnect" class="quiet" type="button">Disconnect</button></div>
+    </section>
+    <button id="forget-connection" class="quiet" type="button" hidden>Forget connection</button>
+    <details><summary>Having trouble connecting?</summary><ul>
+      <li>Open the Music Assistant address in another browser tab first to check it is reachable.</li>
+      <li>Use a Music Assistant user token with permission to read players.</li>
+      <li>Allow local-network access if your browser asks. Your screen and server must be able to reach one another.</li>
+      <li>An HTTPS page cannot connect to an insecure HTTP server. Run CD Shelf over local HTTP, or use HTTPS for both.</li>
+    </ul></details>
+  </section>
+</div>
+  <footer>Inspired by CD Shelf for LMS · ChrisHoppyBot &amp; Joe Leech</footer>
+</main>
+<script type="module" src="web/connection.js"></script>
+</body></html>

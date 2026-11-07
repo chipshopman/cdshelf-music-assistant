@@ -1,0 +1,7 @@
+configuration:
+  music_assistant_url:
+    name: Music Assistant address
+    description: "The direct server address, for example http://192.168.1.50:8095. Use the server's LAN IP, not 127.0.0.1 or a Home Assistant sidebar URL."
+  music_assistant_token:
+    name: Music Assistant access token
+    description: "Paste a Music Assistant user token once here. It needs library, player and playback access. It stays on the server; listeners never enter it."

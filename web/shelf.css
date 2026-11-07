@@ -29,3 +29,6 @@ body.has-shelf main{padding-bottom:24px}
 
 body.auto-connecting #connection-form{display:none}
 #forget-connection{margin-top:14px}
+
+/* Ingress owns authentication; there is no browser token setup in this mode. */
+body[data-managed=true] #connection-form,body[data-managed=true] #forget-connection{display:none!important}

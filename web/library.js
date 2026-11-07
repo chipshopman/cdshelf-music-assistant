@@ -32,9 +32,12 @@ export function filterAlbums(albums, search = '', sort = 'artist') {
     });
 }
 
-export function artworkUrl(album, address, size = 512) {
+export function artworkUrl(album, address, size = 512, proxyBase = null) {
   const image = album.image || album.metadata?.images?.find(image => image.type === 'thumb') || album.metadata?.images?.[0];
   if (!image) return '';
+  if (proxyBase) {
+    return image.proxy_id && /^[a-f0-9]{64}$/i.test(image.proxy_id) ? new URL(`${image.proxy_id}?size=${size}`, proxyBase).href : '';
+  }
   const base = new URL(address); base.protocol = ['https:', 'wss:'].includes(base.protocol) ? 'https:' : 'http:';
   base.pathname = '/'; base.search = ''; base.hash = '';
   if (image.proxy_id && /^[a-f0-9]{64}$/i.test(image.proxy_id)) {
