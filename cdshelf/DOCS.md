@@ -1,6 +1,6 @@
 # Set up CD Shelf in Home Assistant
 
-This is the first **experimental** Home Assistant app/add-on release, version **0.1.2**, targeting Music Assistant **2.10.9**. The backend has been tested with a simulated Music Assistant server, including real HTTP/WebSocket connections and multiple screens. A container build and a real Home Assistant OS installation have not yet been verified. Keep the existing PC version available during this first installation.
+This is the first **experimental** Home Assistant app/add-on release, version **0.1.3**, targeting Music Assistant **2.10.9**. The backend has been tested with a simulated Music Assistant server, including real HTTP/WebSocket connections and multiple screens. Steve has reported the Home Assistant installation and clean display working. Release 0.1.3 needs checking on that live installation after updating; automated tests do not replace that check. Keep the existing PC version available during this first installation.
 
 ## Install
 
@@ -34,7 +34,7 @@ The separate tab uses the current Ingress session URL, not a permanent public ad
 | Music Assistant address (`music_assistant_url`) | The direct Music Assistant server address, e.g. `http://192.168.1.50:8095`. Use the LAN address you already use to connect to Music Assistant. |
 | Music Assistant access token (`music_assistant_token`) | A token created in **Music Assistant's user/profile settings**, with permission to read the library and players, read queues and control playback. A Home Assistant long-lived token is not interchangeable. |
 
-Use the direct server address, without `/ws`, a Home Assistant Ingress path, credentials or query parameters. **127.0.0.1 refers to this new app's own container**, not your Music Assistant server. The token field is masked in the configuration UI. Do not put a real token into the repository, screenshots or issue reports.
+Use the final direct server address: redirects are deliberately rejected before the token is sent. Use the direct server address, without `/ws`, a Home Assistant Ingress path, credentials or query parameters. **127.0.0.1 refers to this new app's own container**, not your Music Assistant server. The token field is masked in the configuration UI. Do not put a real token into the repository, screenshots or issue reports.
 
 Save changed settings and restart CD Shelf to apply them. The backend reads `/data/options.json` on startup. Reopening CD Shelf or using **Reconnect** then connects with the centrally saved configuration. Users do not need a copy of the token.
 
@@ -65,7 +65,7 @@ Save changed settings and restart CD Shelf to apply them. The backend reads `/da
 
 **AirPlay does not play:** The Android tablet is a remote control; Music Assistant sends the AirPlay stream itself. Test that player directly in Music Assistant to check its pairing, availability and provider settings.
 
-**Some covers are blank:** Artwork uses Music Assistant 2.10.9 image proxy IDs. Missing IDs get a text fallback. The original NAS paths are never opened directly by the browser.
+**Some covers are blank:** Artwork uses Music Assistant 2.10.9 image proxy IDs. Missing IDs get a text fallback. The artwork proxy accepts raster formats such as JPEG, PNG and WebP; SVG is deliberately rejected. The original NAS paths are never opened directly by the browser.
 
 **Sidebar entry missing for another user:** Enable Show in sidebar for the app and check that user's sidebar customisation. Users must be able to sign in to your Home Assistant instance.
 

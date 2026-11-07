@@ -40,9 +40,16 @@ export class MusicAssistantClient {
     try {
       const info = await new Promise((resolve, reject) => {
         const timer = setTimeout(() => reject(new Error('Connection timed out. Check the address and local-network access.')), this.timeout);
-        const finish = (error, data) => { clearTimeout(timer); error ? reject(error) : resolve(data); };
+        let settled = false;
+        const finish = (error, data) => {
+          if (settled) return; settled = true; clearTimeout(timer);
+          if (this.handshake?.socket === socket) this.handshake = null;
+          error ? reject(error) : resolve(data);
+        };
+        this.handshake = { socket, cancel: () => finish(new Error('Connection cancelled.')) };
         socket.onmessage = event => {
           let data; try { data = JSON.parse(event.data); } catch { finish(new Error('The server returned an invalid response.')); return; }
+          if (!data || typeof data !== 'object' || Array.isArray(data)) { finish(new Error('The server returned an invalid response.')); return; }
           if (!data.server_version) return;
           socket.onmessage = event => this.receive(event);
           finish(null, data);
@@ -50,6 +57,7 @@ export class MusicAssistantClient {
         socket.onerror = () => finish(new Error('Cannot reach Music Assistant. Check its direct address, HTTPS settings and network access.'));
         socket.onclose = () => finish(new Error('Music Assistant closed the connection before sign-in.'));
       });
+      if (this.socket !== socket || socket.readyState !== 1) throw new Error('Connection cancelled.');
       socket.onerror = () => {}; // onclose handles loss after the initial greeting.
       socket.onclose = () => {
         if (this.socket !== socket) return;
@@ -61,7 +69,7 @@ export class MusicAssistantClient {
       if (info.managed_error) throw new Error(info.managed_error);
       if (authArgs) await this.request('auth', authArgs);
       return info;
-    } catch (error) { this.disconnect(); throw error; }
+    } catch (error) { if (this.socket === socket) this.disconnect(); throw error; }
   }
   request(command, args = {}, { timeout = this.timeout } = {}) {
     if (!this.socket || this.socket.readyState !== 1) return Promise.reject(new Error('Connect to Music Assistant first.'));
@@ -76,10 +84,12 @@ export class MusicAssistantClient {
   }
   receive(event) {
     let data; try { data = JSON.parse(event.data); } catch { return; }
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return;
     const message_id = String(data.message_id);
     const entry = this.pending.get(message_id); if (!entry) return;
     if (data.error_code !== undefined) {
       clearTimeout(entry.timer); this.pending.delete(message_id);
+      if (data.error_code === 408) { entry.reject(new Error('Music Assistant took too long to respond. Please retry the action.')); return; }
       const action = entry.command === 'auth' ? 'sign-in' : entry.command.startsWith('music/') ? 'library request' : entry.command.startsWith('player_queues/') ? 'playback request' : 'player request';
       entry.reject(new Error(this.managed ? `Music Assistant rejected the ${action}. Ask the administrator to check the app’s Music Assistant token and permissions.` : `Music Assistant rejected the ${action}. Check that your token is valid and has the required library, player or playback permissions.`)); return;
     }
@@ -139,6 +149,7 @@ export class MusicAssistantClient {
   }
   rejectPending(error) { for (const entry of this.pending.values()) { clearTimeout(entry.timer); entry.reject(error); } this.pending.clear(); }
   disconnect() {
+    const handshake = this.handshake; this.handshake = null; handshake?.cancel();
     this.clearTrackCache();
     const socket = this.socket; this.socket = null;
     if (socket) { socket.onclose = null; socket.close(); }

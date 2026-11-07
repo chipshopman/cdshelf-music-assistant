@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.1.3
+
+- Red-team review: prevent superseded or cancelled connection attempts from closing/authenticating through a newer connection.
+- Block upstream redirects before sending the saved Music Assistant token; use the final direct server address in configuration.
+- Restrict managed playback requests to numeric library album URIs and bound library page sizes to 200.
+- Accept raster artwork only, rejecting SVG/active content and applying a sandbox content policy to proxied images.
+- Expire unanswered bridge requests after 75 seconds; use independent upstream IDs so late replies cannot satisfy reused browser request IDs.
+- Reject malformed greetings cleanly. Normal browsing, playback, Put back and display controls remain available.
+- Findings, preconditions and verification are documented in RED-TEAM-REVIEW.md at the repository root.
+
 ## 0.1.2
 
 - Full screen control shows CD Shelf alone, with an exit button and browser exit support.

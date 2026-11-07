@@ -96,3 +96,41 @@ test('track timeout suggests retrying the album without requiring reconnection',
   assert.equal(client.trackRequests.size, 0); assert.equal(client.pending.size, 0);
   client.disconnect();
 });
+
+test('a superseded connection cannot authenticate through or close the newer socket', async () => {
+  class DelayedSocket {
+    static instances=[];
+    constructor(url) {this.url=url;this.readyState=1;this.sent=[];DelayedSocket.instances.push(this);if(url.includes('new-host'))queueMicrotask(()=>this.onmessage?.({data:JSON.stringify({server_version:'2.10.9'})}));}
+    send(raw){const msg=JSON.parse(raw);this.sent.push(msg);queueMicrotask(()=>this.onmessage?.({data:JSON.stringify({message_id:msg.message_id,result:{authenticated:true}})}));}
+    close(){this.readyState=3;this.onclose?.();}
+  }
+  const client=new MusicAssistantClient({WebSocketImpl:DelayedSocket,timeout:20});
+  const old=client.connect('http://old-host','old-token').catch(error=>error);
+  await client.connect('http://new-host','new-token');
+  DelayedSocket.instances[0].onmessage?.({data:JSON.stringify({server_version:'2.10.9'})});
+  await old;
+  const current=DelayedSocket.instances[1];
+  assert.equal(current.readyState,1,'late failure of the old attempt closed the new connection');
+  assert.deepEqual(current.sent.map(x=>x.args.token),['new-token']);
+  client.disconnect();
+});
+
+test('explicit disconnect cancels an in-progress handshake immediately', async () => {
+  class SilentSocket {constructor(){this.readyState=1;}close(){this.readyState=3;}}
+  const client=new MusicAssistantClient({WebSocketImpl:SilentSocket,timeout:10000});
+  const pending=client.connectManaged('ws://host/api/ws');
+  const rejected=assert.rejects(pending,/cancelled/);
+  client.disconnect();await rejected;assert.equal(client.handshake,null);
+});
+
+
+test('malformed greetings fail cleanly rather than throwing from an event callback', async () => {
+  class SilentSocket {constructor(){this.readyState=1;}close(){this.readyState=3;}}
+  for (const response of ['null','[]']) {
+    const client=new MusicAssistantClient({WebSocketImpl:SilentSocket});
+    const pending=client.connectManaged('ws://host/api/ws');
+    const rejected=assert.rejects(pending,/invalid response/);
+    assert.doesNotThrow(()=>client.socket.onmessage({data:response}));
+    await rejected;
+  }
+});

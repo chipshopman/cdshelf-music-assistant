@@ -19,6 +19,9 @@ class BackendTests(unittest.IsolatedAsyncioTestCase):
     async def asyncSetUp(self):
         self.calls = []
         self.images = []
+        self.held_requests = []
+        self.hold_requests = False
+        self.artwork_type = 'image/jpeg'
         self.reject_auth = False
         self.disconnect_upstream = False
         self.clients = []
@@ -44,6 +47,8 @@ class BackendTests(unittest.IsolatedAsyncioTestCase):
                             await ws.send_json({'event': 'config_updated', 'data': SECRET})
                     elif self.disconnect_upstream:
                         await ws.close()
+                    elif self.hold_requests:
+                        self.held_requests.append((ws, data))
                     elif cmd == 'config/players':
                         await ws.send_json({'message_id': mid, 'result': [{'player_id': 'onkyo', 'name': 'New Onkyo name', 'default_name': 'Onkyo', 'values': {'password': SECRET}, 'secret': SECRET}]})
                     elif cmd == 'players/all':
@@ -61,7 +66,7 @@ class BackendTests(unittest.IsolatedAsyncioTestCase):
 
         async def image_handler(request):
             self.images.append((request.path, request.query_string, request.headers.get('Authorization')))
-            return web.Response(body=b'fake-image', content_type='image/jpeg')
+            return web.Response(body=b'fake-image', content_type=self.artwork_type)
 
         upstream = web.Application()
         upstream.router.add_get('/ws', ws_handler)
@@ -71,8 +76,8 @@ class BackendTests(unittest.IsolatedAsyncioTestCase):
         self.options = {'music_assistant_url': str(self.ma.make_url('/')), 'music_assistant_token': SECRET}
         self.client = await self.make_client()
 
-    async def make_client(self, options=None, allowed_peers=frozenset({'127.0.0.1'})):
-        app = backend.create_app(self.options if options is None else options, allowed_peers=allowed_peers)
+    async def make_client(self, options=None, allowed_peers=frozenset({'127.0.0.1'}), request_timeout=75):
+        app = backend.create_app(self.options if options is None else options, allowed_peers=allowed_peers, request_timeout=request_timeout)
         client = TestClient(TestServer(app))
         await client.start_server()
         self.clients.append(client)
@@ -108,8 +113,57 @@ class BackendTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn(SECRET, json.dumps(response))
         await ws.send_json({'message_id': '2', 'command': 'players/cmd/stop', 'args': {'player_id': 'onkyo'}})
         self.assertEqual((await ws.receive_json(timeout=2))['result'], {'ok': True})
-        self.assertEqual(self.calls[-1], {'message_id': '2', 'command': 'players/cmd/stop', 'args': {'player_id': 'onkyo'}})
+        self.assertEqual(self.calls[-1], {'message_id': 'cdshelf-2', 'command': 'players/cmd/stop', 'args': {'player_id': 'onkyo'}})
         await ws.close()
+
+    async def test_redirect_cannot_send_saved_token_to_another_server(self):
+        async def redirect(request):
+            raise web.HTTPFound(str(self.ma.make_url('/ws')))
+        app = web.Application()
+        app.router.add_get('/ws', redirect)
+        async with TestServer(app) as redirector:
+            client = await self.make_client({'music_assistant_url': str(redirector.make_url('/')), 'music_assistant_token': SECRET})
+            ws, greeting = await self.connect(client)
+            self.assertIn('managed_error', greeting)
+            self.assertFalse(self.calls, 'Saved token reached the redirect target')
+            await ws.close()
+
+    async def test_active_svg_is_not_served_under_home_assistant_origin(self):
+        self.artwork_type = 'image/svg+xml'
+        response = await self.client.get('/api/imageproxy/' + 'a' * 64)
+        self.assertEqual(response.status, 404)
+
+    async def test_playback_bridge_rejects_external_urls(self):
+        ws, _ = await self.connect()
+        await ws.send_json({'message_id': '1', 'command': 'player_queues/play_media', 'args': {'queue_id': 'onkyo', 'media': 'http://127.0.0.1/private', 'option': 'replace', 'shuffle': False}})
+        self.assertEqual((await ws.receive(timeout=2)).type, WSMsgType.CLOSE)
+        self.assertFalse(any(c['command'] == 'player_queues/play_media' for c in self.calls))
+        await ws.close()
+
+    async def test_unanswered_requests_expire_and_late_replies_cannot_replace_newer_results(self):
+        client = await self.make_client(request_timeout=0.04)
+        ws, _ = await self.connect(client)
+        self.hold_requests = True
+        await ws.send_json({'message_id': '1', 'command': 'players/all'})
+        self.assertEqual(await ws.receive_json(timeout=2), {'message_id': '1', 'error_code': 408})
+        old_socket, old_request = self.held_requests[0]
+        self.hold_requests = False
+        # Reusing a browser ID must not accept the expired upstream response.
+        await ws.send_json({'message_id': '1', 'command': 'players/all'})
+        await old_socket.send_json({'message_id': old_request['message_id'], 'result': [{'player_id': 'stale'}]})
+        self.assertEqual((await ws.receive_json(timeout=2))['result'], [{'player_id': 'onkyo'}])
+        await ws.send_json({'message_id': '2', 'command': 'players/all'})
+        response = await ws.receive_json(timeout=2)
+        self.assertEqual(response['message_id'], '2')
+        await ws.close()
+
+    async def test_oversized_or_malformed_library_queries_are_not_forwarded(self):
+        for limit in (1000000000, -1, True):
+            ws, _ = await self.connect()
+            await ws.send_json({'message_id': '1', 'command': 'music/albums/library_items', 'args': {'offset': 0, 'limit': limit, 'summary': False, 'order_by': 'sort_name'}})
+            self.assertEqual((await ws.receive(timeout=2)).type, WSMsgType.CLOSE)
+            await ws.close()
+        self.assertFalse(any(c['command'] == 'music/albums/library_items' for c in self.calls))
 
     async def test_multiple_tablets_keep_request_ids_separate(self):
         a, _ = await self.connect()

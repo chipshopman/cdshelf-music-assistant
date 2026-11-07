@@ -10,7 +10,7 @@ A Music Assistant adaptation of CD Shelf, targeting server **2.10.9**.
 
 **[Home Assistant installation and configuration](cdshelf/DOCS.md)**
 
-The frontend and backend tests pass locally. A Docker image build and installation on a real Home Assistant OS machine still need verification; keep your working PC version while testing this first package. The add-on is built locally by Supervisor; no pre-published CD Shelf image is needed.
+The frontend and backend tests pass locally. Steve has reported the Home Assistant installation working. New updates are tested locally with simulated Music Assistant responses and still need a live check after installation. The add-on is built locally by Supervisor; no pre-published CD Shelf image is needed.
 
 ## Shelf preview
 
@@ -64,3 +64,5 @@ Run `npm run prepare-addon` after frontend changes so the Home Assistant package
 Backend checks use Python 3.12+ and the dependency in `cdshelf/requirements.txt`: `python -m unittest discover -s tests -p 'test_*.py' -v`. They cover real local HTTP/WebSockets, server-only authentication, restricted commands, concurrent screens, partial results, artwork, disconnected upstreams and Ingress peer enforcement.
 
 Use **Full screen** at the top for a clean CD Shelf view, or **Open on its own** to open the current Ingress session in a separate tab without Home Assistant navigation. Browser full-screen support and session lifetime still apply.
+
+[Red-team review and fixes in 0.1.3](RED-TEAM-REVIEW.md).
