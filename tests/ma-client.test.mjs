@@ -55,3 +55,44 @@ test('unexpected disconnection clears requests and notifies caller', async () =>
   assert.equal(lost, true); assert.equal(client.pending.size, 0);
   await assert.rejects(client.players(), /Connect/);
 });
+
+test('slow track responses get a longer allowance without changing other request timeouts', async () => {
+  const client = new MusicAssistantClient({ timeout: 10, trackTimeout: 100 });
+  client.socket = { readyState: 1, send(raw) {
+    const { message_id, command } = JSON.parse(raw);
+    setTimeout(() => client.receive({ data: JSON.stringify({ message_id, result: command.includes('album_tracks') ? [{ item_id: 'track1' }] : [] }) }), 30);
+  }, close() {} };
+  assert.equal((await client.albumTracks({ item_id: '1' })).length, 1);
+  await assert.rejects(client.players(), /did not respond in time/);
+  client.disconnect();
+});
+
+test('reopening albums shares pending requests and caches independent arrays; refresh discards stale results', async () => {
+  const client = new MusicAssistantClient(); let calls = 0; const responses = [];
+  client.request = () => { calls++; return new Promise((resolve, reject) => responses.push({ resolve, reject })); };
+  const album = { item_id: '1', provider: 'library' };
+  const first = client.albumTracks(album), second = client.albumTracks(album);
+  assert.equal(calls, 1);
+  responses[0].resolve([{ item_id: 'track' }]);
+  const a = await first, b = await second; a.pop();
+  assert.equal(b.length, 1); assert.equal((await client.albumTracks(album)).length, 1); assert.equal(calls, 1);
+  client.clearTrackCache();
+  const stale = client.albumTracks(album);
+  client.clearTrackCache();
+  responses[1].resolve([{ item_id: 'old' }]); await stale;
+  assert.equal(client.trackCache.size, 0);
+  const retry = client.albumTracks(album);
+  responses[2].reject(new Error('temporary failure'));
+  await assert.rejects(retry, /temporary failure/);
+  const recovered = client.albumTracks(album);
+  responses[3].resolve([{ item_id: 'new' }]); assert.equal((await recovered)[0].item_id, 'new');
+  client.disconnect(); assert.equal(client.trackCache.size, 0);
+});
+
+test('track timeout suggests retrying the album without requiring reconnection', async () => {
+  const client = new MusicAssistantClient({ trackTimeout: 5 });
+  client.socket = { readyState: 1, send() {}, close() {} };
+  await assert.rejects(client.albumTracks({ item_id: '1' }), /Close and reopen this album/);
+  assert.equal(client.trackRequests.size, 0); assert.equal(client.pending.size, 0);
+  client.disconnect();
+});
