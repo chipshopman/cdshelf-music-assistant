@@ -26,3 +26,6 @@ body.has-shelf main{padding-bottom:24px}
 .cover-play:focus-visible{outline-offset:5px}
 @media(max-width:1100px){.shelf-controls{grid-template-columns:1fr 1fr}.shelf-paging{grid-row:2;grid-column:1/-1}.device-picker{justify-self:end;width:min(100%,300px)}.below-shelf{grid-template-columns:minmax(0,1fr) minmax(300px,360px)}}
 @media(max-width:760px){main{padding:18px 14px}.below-shelf{grid-template-columns:1fr}.below-shelf>.panel{grid-column:1;grid-row:2}#album-detail{grid-row:1}.shelf-controls{gap:14px}.album-actions{flex-wrap:wrap}.shelf-controls button{padding:12px}.device-picker{min-width:0}#shelf{padding:0}#album-tracks li{padding:12px 0}.shelf-paging{justify-content:space-between}}
+
+body.auto-connecting #connection-form{display:none}
+#forget-connection{margin-top:14px}

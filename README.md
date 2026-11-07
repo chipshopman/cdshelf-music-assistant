@@ -20,6 +20,14 @@ The shelf's expanding jewel-case treatment is adapted from CD Shelf 0.7.6. Print
 
 No build tools or npm packages are needed to run the screen. Serve this folder with Python's HTTP server and open it in a browser. When updating an existing local copy, replace the root `index.html` and the entire `web/` folder, then hard-refresh the browser. The original LMS source under `CDShelf/` and archives under `releases/` are unchanged.
 
+## Automatic connection
+
+Enter the Music Assistant address and token once per browser/device, leaving **Remember this device and connect automatically** checked. CD Shelf saves the connection in that browser's local storage and loads the collection automatically on subsequent visits. No music starts until Play is pressed. The token is hidden in Connection settings, not embedded in the source files. Browser storage is not a server-side secret vault; anyone with access to that browser profile can retrieve it.
+
+Use **Forget connection** to disconnect and remove the saved token. **Disconnect** stops the current connection but keeps the saved setup for your next visit. Unchecking Remember removes the saved token. If a connection fails, the setup form reappears so you can retry or change the token.
+
+Use the same site address each time (for example, your PC's LAN address on both devices). Different addresses/ports and browser profiles have separate storage; clearing site data or using private browsing can remove the saved setup. Each tablet or PC needs its own initial setup.
+
 ## Attribution
 
 CD Shelf is based on the **“CD Shelf – a custom 3D CD spine browser”** shared by Reddit user **ChrisHoppyBot** in r/squeezebox. Original concept and code by ChrisHoppyBot. LMS plugin packaging, Material integration, player selection and subsequent UI modifications by Joe Leech.

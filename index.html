@@ -40,16 +40,18 @@
       <label for="token">Music Assistant access token</label>
       <div class="token-row"><input id="token" name="token" type="password" required autocomplete="off" spellcheck="false" aria-describedby="token-help"><button id="reveal" type="button" class="quiet" aria-controls="token" aria-pressed="false">Show</button></div>
       <small id="token-help">Create a token in Music Assistant’s user/profile settings. This is a Music Assistant token, not a Home Assistant token. Do not share it in GitHub or chat.</small>
-      <label class="check"><input id="remember" type="checkbox"> Keep the token for this browser tab’s session</label>
-      <small>Unchecked: the token stays in memory only. The server address is remembered on this browser.</small>
-      <div class="actions"><button id="connect" type="submit">Connect</button><button id="disconnect" class="quiet" type="button" hidden>Disconnect</button></div>
+      <label class="check"><input id="remember" type="checkbox" checked> Remember this device and connect automatically</label>
+      <small>Saves the token in this browser on this device. Uncheck for a shared device; the token then stays in memory only.</small>
+      <div class="actions"><button id="connect" type="submit">Connect</button></div>
     </form>
     <p id="status" role="status" aria-live="polite">Ready to connect.</p>
     <section id="connected" hidden aria-labelledby="players-heading">
       <h3 id="players-heading">Your players</h3><p id="server-detail"></p>
       <p id="player-detail"></p><button id="refresh" type="button" class="quiet">Refresh players</button>
       <p class="note">Choose the room you want to play in, then browse your collection above. Playback starts only when you press Play album.</p>
+      <div class="actions"><button id="disconnect" class="quiet" type="button">Disconnect</button></div>
     </section>
+    <button id="forget-connection" class="quiet" type="button" hidden>Forget connection</button>
     <details><summary>Having trouble connecting?</summary><ul>
       <li>Open the Music Assistant address in another browser tab first to check it is reachable.</li>
       <li>Use a Music Assistant user token with permission to read players.</li>
