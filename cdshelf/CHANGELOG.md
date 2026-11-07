@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.1
+
+- Device labels show player names and provider/output protocols, with IDs where needed to distinguish otherwise identical entries.
+- Refresh players reads saved custom names as well as live state; configuration-name access is optional and does not prevent playback with a more restricted token.
+- Put back sends Stop to the selected player before closing the CD. It also works with no cover open; browsing/searching never sends Stop.
+- Playback and stop status stays visible below the control row.
+- The Ingress bridge supports Stop and a sanitised, names-only player configuration read.
+
 ## 0.1.0
 
 - First experimental Home Assistant app/add-on package for amd64 and aarch64.

@@ -1,3 +1,4 @@
+import { playerName } from './players.js';
 import { albumKey, artistName, artworkUrl, durationLabel, filterAlbums, loadAlbumLibrary } from './library.js';
 const $ = id => document.getElementById(id);
 const PAGE_SIZE = 150; // Keep DOM and artwork requests bounded on tablets.
@@ -6,12 +7,12 @@ const node = (tag, className, text) => { const el = document.createElement(tag);
 export class AlbumShelf {
   constructor(client, getPlayer) {
     this.client = client; this.getPlayer = getPlayer; this.albums = []; this.filtered = [];
-    this.page = 0; this.generation = 0; this.selectionGeneration = 0; this.selected = null; this.playingRequest = false;
+    this.page = 0; this.generation = 0; this.selectionGeneration = 0; this.selected = null; this.playingRequest = false; this.stoppingRequest = false;
     $('album-search').oninput = () => this.filter(); $('album-sort').onchange = () => this.filter();
     $('reload-albums').onclick = () => this.load(this.address, { artworkBase: this.artworkBase });
     $('previous-shelf').onclick = () => { this.page--; this.render(); };
     $('next-shelf').onclick = () => { this.page++; this.render(); };
-    $('close-album').onclick = () => this.closeAlbum();
+    $('close-album').onclick = () => this.putBack();
     $('play-album').onclick = () => this.play();
     $('spine-frame').onkeydown = event => { if (event.key === 'Escape') this.closeAlbum(); };
   }
@@ -105,14 +106,13 @@ export class AlbumShelf {
   }
   closeAlbum() {
     this.selectionGeneration++; this.selected = null; $('album-detail').hidden = true;
-    $('close-album').disabled = true; this.playerChanged();
+    this.playerChanged();
     for (const box of $('rack').children) { box.classList.remove('expanded'); const cover = box.querySelector('.face-cover-container'); cover.inert = true; cover.setAttribute('aria-hidden', 'true'); const button = box.querySelector('button'); button?.setAttribute('aria-expanded', 'false'); if (button) button.tabIndex = 0; }
   }
   async openAlbum(album, box, coverUrl, title) {
     this.closeAlbum(); const generation = this.selectionGeneration; this.selected = album;
     box.classList.add('expanded'); box.querySelector('button').setAttribute('aria-expanded', 'true');
     const cover = box.querySelector('.face-cover-container'); cover.inert = false; cover.setAttribute('aria-hidden', 'false');
-    $('close-album').disabled = false;
     if (coverUrl && !cover.querySelector('img')) { const img = node('img'); img.alt = ''; img.src = coverUrl; img.onerror = () => img.remove(); cover.append(img, node('span', 'jewel-case-overlay'), node('span', 'case-label', title)); }
     this.centre(box); setTimeout(() => { if (this.selected === album) this.centre(box); }, 360);
     $('album-detail').hidden = false; $('album-title').textContent = album.name || 'Untitled album';
@@ -135,19 +135,35 @@ export class AlbumShelf {
   }
   playerChanged() {
     const player = this.getPlayer();
-    $('play-destination').textContent = player ? `On ${player.name || player.player_id}${player.available === false ? ' · unavailable' : ''}` : 'Choose a device using Play on.';
-    const disabled = this.playingRequest || !player || player.available === false || !this.selected;
+    $('play-destination').textContent = player ? `On ${playerName(player)}${player.available === false ? ' · unavailable' : ''}` : 'Choose a device using Play on.';
+    const disabled = this.playingRequest || this.stoppingRequest || !player || player.available === false || !this.selected;
     $('play-album').disabled = disabled;
+    $('close-album').disabled = this.playingRequest || this.stoppingRequest || !player || player.available === false;
     for (const button of $('rack').querySelectorAll('.cover-play')) button.disabled = disabled || !button.closest('.cd-box').classList.contains('expanded');
+  }
+  async putBack() {
+    const player = this.getPlayer();
+    if (this.playingRequest || this.stoppingRequest || !player || player.available === false) return;
+    const generation = this.selectionGeneration;
+    this.stoppingRequest = true; this.playerChanged();
+    $('play-status').dataset.error = 'false'; $('play-status').textContent = `Stopping playback on ${playerName(player)}…`;
+    try {
+      await this.client.stopPlayer(player.player_id);
+      if (generation === this.selectionGeneration) this.closeAlbum();
+      $('play-status').textContent = `Playback stopped on ${playerName(player)}.`;
+    } catch (error) {
+      $('play-status').dataset.error = 'true';
+      $('play-status').textContent = `Could not stop playback. ${error.message}`;
+    } finally { this.stoppingRequest = false; this.playerChanged(); }
   }
   async play() {
     const album = this.selected, player = this.getPlayer();
-    if (this.playingRequest || !album || !player || player.available === false) return;
+    if (this.playingRequest || this.stoppingRequest || !album || !player || player.available === false) return;
     const generation = this.selectionGeneration; this.playingRequest = true; this.playerChanged();
-    $('play-status').dataset.error = 'false'; $('play-status').textContent = `Sending ${album.name} to ${player.name || player.player_id}…`;
+    $('play-status').dataset.error = 'false'; $('play-status').textContent = `Sending ${album.name} to ${playerName(player)}…`;
     try {
       await this.client.playAlbum(album, player.player_id);
-      if (generation === this.selectionGeneration) $('play-status').textContent = `Playback requested on ${player.name || player.player_id}.`;
+      if (generation === this.selectionGeneration) $('play-status').textContent = `Playback requested on ${playerName(player)}.`;
     } catch (error) { if (generation === this.selectionGeneration) { $('play-status').dataset.error = 'true'; $('play-status').textContent = `Could not start playback. ${error.message}`; } }
     finally { this.playingRequest = false; this.playerChanged(); }
   }

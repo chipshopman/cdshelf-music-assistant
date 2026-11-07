@@ -12,6 +12,8 @@ ROOT = Path(__file__).parent / 'www'
 MAX_MESSAGE = 8 * 1024 * 1024
 ALLOWED = {
     'players/all': set(),
+    'config/players': {'include_values'},
+    'players/cmd/stop': {'player_id'},
     'music/albums/library_items': {'offset', 'limit', 'order_by', 'summary'},
     'music/albums/album_tracks': {'item_id', 'provider_instance_id_or_domain'},
     'player_queues/get_active_queue': {'player_id'},
@@ -82,7 +84,7 @@ def create_app(options, *, allowed_peers=frozenset({'172.30.32.2'}), root=ROOT):
 
     async def static(request):
         name = request.match_info['name']
-        if name not in {'connection.js', 'connection.css', 'shelf.js', 'shelf.css', 'ma-client.js', 'library.js'}:
+        if name not in {'connection.js', 'connection.css', 'shelf.js', 'shelf.css', 'ma-client.js', 'library.js', 'players.js'}:
             raise web.HTTPNotFound()
         return web.FileResponse(root / 'web' / name)
 
@@ -93,7 +95,7 @@ def create_app(options, *, allowed_peers=frozenset({'172.30.32.2'}), root=ROOT):
         upstream = None
         tasks = []
         ready = False
-        pending = set()
+        pending = {}
         try:
             if config_error:
                 raise ValueError(config_error)
@@ -134,7 +136,9 @@ def create_app(options, *, allowed_peers=frozenset({'172.30.32.2'}), root=ROOT):
                             or not isinstance(args.get('media'), str)
                         ):
                             raise ValueError
-                        pending.add(message_id)
+                        if command == 'config/players' and args.get('include_values') is not False:
+                            raise ValueError
+                        pending[message_id] = command
                         await upstream.send_json({'message_id': message_id, 'command': command, 'args': args})
                     except (ValueError, TypeError, AttributeError):
                         await browser.close(code=1008, message=b'Unsupported request')
@@ -148,12 +152,19 @@ def create_app(options, *, allowed_peers=frozenset({'172.30.32.2'}), root=ROOT):
                     message_id = str(data.get('message_id', ''))
                     if message_id not in pending:
                         continue
+                    command = pending[message_id]
                     if not data.get('partial'):
-                        pending.discard(message_id)
+                        pending.pop(message_id, None)
                     if 'error_code' in data:
                         await browser.send_json({'message_id': message_id, 'error_code': 999})
                     else:
-                        await browser.send_json({'message_id': message_id, 'result': data.get('result'), 'partial': bool(data.get('partial'))})
+                        result = data.get('result')
+                        if command == 'config/players':
+                            # This read is for labels only; never expose configuration values.
+                            fields = {'player_id', 'name', 'default_name'}
+                            result = [{key: value for key, value in item.items() if key in fields}
+                                      for item in result if isinstance(item, dict)] if isinstance(result, list) else []
+                        await browser.send_json({'message_id': message_id, 'result': result, 'partial': bool(data.get('partial'))})
 
             tasks = [asyncio.create_task(from_browser()), asyncio.create_task(from_server())]
             done, _ = await asyncio.wait(tasks, return_when=asyncio.FIRST_COMPLETED)

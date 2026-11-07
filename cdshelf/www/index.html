@@ -15,18 +15,18 @@
   <div id="spine-frame" tabindex="0" aria-label="CD shelf. Swipe or scroll horizontally; tab to an album and press Enter to open it."><div id="rack"></div></div>
   <p id="shelf-empty" hidden></p>
   <div class="shelf-controls">
-    <div class="album-actions"><button id="play-album" type="button" disabled>Play album</button><button id="close-album" class="quiet" type="button" disabled>Put back</button></div>
+    <div class="album-actions"><button id="play-album" type="button" disabled>Play album</button><button id="close-album" class="quiet" type="button" title="Stop playback on the selected device and put back the CD" aria-label="Stop playback and put back the CD" disabled>Put back</button></div>
     <nav class="shelf-paging" aria-label="Collection pages"><button id="previous-shelf" class="quiet" type="button">Previous shelf</button><span id="shelf-page"></span><button id="next-shelf" class="quiet" type="button">Next shelf</button></nav>
     <div class="device-picker"><label for="player">Play on</label><select id="player" disabled aria-label="Device to stream to"></select></div>
   </div>
+  <p id="play-status" role="status" aria-live="polite"></p>
   <p class="shelf-help">Swipe the spines or use the scrollbar. Tap a spine to pull out its cover. Spines are recreated from cover artwork and album titles.</p>
 </section>
 <div class="below-shelf">
   <section id="album-detail" hidden aria-labelledby="album-title">
     <div class="album-heading"><div><p id="album-artist"></p><h3 id="album-title"></h3><p id="album-version"></p></div></div>
     <p id="play-destination"></p>
-    <p class="queue-note">Play album replaces the selected room’s current queue and plays the album in track order.</p>
-    <p id="play-status" role="status" aria-live="polite"></p>
+    <p class="queue-note">Play album replaces the selected room’s current queue and plays the album in track order. Put back stops playback on the selected device (including its active group).</p>
     <h4>Track listing</h4><p id="tracks-status" role="status"></p><ol id="album-tracks"></ol>
   </section>
   <section class="panel" aria-labelledby="heading">

@@ -1,6 +1,6 @@
 # Set up CD Shelf in Home Assistant
 
-This is the first **experimental** Home Assistant app/add-on release, version **0.1.0**, targeting Music Assistant **2.10.9**. The backend has been tested with a simulated Music Assistant server, including real HTTP/WebSocket connections and multiple screens. A container build and a real Home Assistant OS installation have not yet been verified. Keep the existing PC version available during this first installation.
+This is the first **experimental** Home Assistant app/add-on release, version **0.1.1**, targeting Music Assistant **2.10.9**. The backend has been tested with a simulated Music Assistant server, including real HTTP/WebSocket connections and multiple screens. A container build and a real Home Assistant OS installation have not yet been verified. Keep the existing PC version available during this first installation.
 
 ## Install
 
@@ -15,7 +15,7 @@ This is the first **experimental** Home Assistant app/add-on release, version **
 4. Open its **Configuration** tab and enter the two settings below. Save.
 5. Start the app. Enable **Start on boot** and **Show in sidebar**.
 6. Select **Open Web UI**, or **CD Shelf** in the sidebar. The collection should load without any token prompt.
-7. Choose the playback device in **Play on**, open a CD and press its triangle or **Play album**. Opening CD Shelf or a cover does not start music. Play replaces the selected device's queue.
+7. Choose the playback device in **Play on** (names include the provider/protocol), open a CD and press its triangle or **Play album**. Opening CD Shelf or a cover does not start music. Play replaces the selected device's queue.
 
 On a tablet, sign in to your usual Home Assistant address or Companion app and choose **CD Shelf** in the sidebar. No Python server on the PC is needed. Each browser remembers its playback device. Home Assistant Ingress handles access; non-admin users can see the sidebar entry because `panel_admin` is false. This does not give them access to the app's configuration.
 
@@ -36,7 +36,7 @@ Save changed settings and restart CD Shelf to apply them. The backend reads `/da
 - The browser communicates only with CD Shelf through Home Assistant Ingress for the library, playback and proxied cover IDs. It does not need direct access to Music Assistant's port or NAS.
 - All people allowed to open CD Shelf share the configured Music Assistant account's available players and playback rights. This version does not map individual Home Assistant users to separate Music Assistant accounts.
 - CD Shelf exposes no host port, does not need host networking, a Supervisor API token or access to Home Assistant configuration files. Its web server accepts only the Supervisor Ingress proxy's TCP address, not user-supplied forwarding headers.
-- The bridge allows only the five library/player/playback commands this UI uses. Music Assistant configuration commands, browser-supplied authentication and impersonation arguments are rejected. Authentication responses and unrelated upstream events are not passed to browsers.
+- The bridge allows only the library/player/playback commands this UI uses, including Stop, plus an optional player-name configuration read. That read returns only player IDs, names and default names; configuration values are stripped server-side. All other configuration commands, browser-supplied authentication and impersonation arguments are rejected. Authentication responses and unrelated upstream events are not passed to browsers.
 - The original standalone version keeps its separate browser-storage connection option; its existing saved token is not needed by this Home Assistant version. You may use **Forget connection** in the old PC version if you no longer need it.
 
 ## Troubleshooting
@@ -53,11 +53,15 @@ Save changed settings and restart CD Shelf to apply them. The backend reads `/da
 
 **Music Assistant restarts or the tablet loses its connection:** Use **Reconnect**, or reopen the CD Shelf sidebar entry. There is no endless retry loop and no automatic playback.
 
+**Renamed players still show an old name:** Use Refresh players. CD Shelf prefers saved custom names and includes the provider/protocol to distinguish connections. Reading saved names needs the Music Assistant token’s player-configuration read permission; if unavailable, a note explains that live names are being used. Player browsing and playback still work with the existing read/control permissions.
+
+**AirPlay does not play:** The Android tablet is a remote control; Music Assistant sends the AirPlay stream itself. Test that player directly in Music Assistant to check its pairing, availability and provider settings.
+
 **Some covers are blank:** Artwork uses Music Assistant 2.10.9 image proxy IDs. Missing IDs get a text fallback. The original NAS paths are never opened directly by the browser.
 
 **Sidebar entry missing for another user:** Enable Show in sidebar for the app and check that user's sidebar customisation. Users must be able to sign in to your Home Assistant instance.
 
-Pause, skip and volume remain in Music Assistant. Live player status is refreshed with **Refresh players**. CD Shelf does not change NAS files or move Music Assistant's library.
+Put back stops the selected device (or its active group) and closes the cover after a successful Stop response. It can also stop playback with no cover open; browsing, changing shelves and searching do not stop playback. Pause, skip and volume remain in Music Assistant. Live player status is refreshed with **Refresh players**. CD Shelf does not change NAS files or move Music Assistant's library.
 
 ## Development and attribution
 

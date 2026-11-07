@@ -24,7 +24,7 @@ test('Ingress connection needs no browser token and makes no browser auth reques
   assert.equal(ManagedSocket.latest.url, endpoint);
   assert.deepEqual(ManagedSocket.latest.sent, []);
   await client.players();
-  assert.deepEqual(ManagedSocket.latest.sent.map(x => x.command), ['players/all']);
+  assert.deepEqual(ManagedSocket.latest.sent.map(x => x.command), ['players/all', 'config/players']);
   client.disconnect();
 });
 

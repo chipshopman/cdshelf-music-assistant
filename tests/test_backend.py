@@ -44,6 +44,8 @@ class BackendTests(unittest.IsolatedAsyncioTestCase):
                             await ws.send_json({'event': 'config_updated', 'data': SECRET})
                     elif self.disconnect_upstream:
                         await ws.close()
+                    elif cmd == 'config/players':
+                        await ws.send_json({'message_id': mid, 'result': [{'player_id': 'onkyo', 'name': 'New Onkyo name', 'default_name': 'Onkyo', 'values': {'password': SECRET}, 'secret': SECRET}]})
                     elif cmd == 'players/all':
                         await ws.send_json({'message_id': mid, 'result': [{'player_id': 'onkyo'}]})
                     elif cmd == 'music/albums/library_items':
@@ -98,6 +100,17 @@ class BackendTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(await ws.receive_json(timeout=2), {'message_id': '2', 'error_code': 999})
         await ws.close()
 
+    async def test_saved_names_are_sanitised_and_stop_is_forwarded(self):
+        ws, _ = await self.connect()
+        await ws.send_json({'message_id': '1', 'command': 'config/players', 'args': {'include_values': False}})
+        response = await ws.receive_json(timeout=2)
+        self.assertEqual(response['result'], [{'player_id': 'onkyo', 'name': 'New Onkyo name', 'default_name': 'Onkyo'}])
+        self.assertNotIn(SECRET, json.dumps(response))
+        await ws.send_json({'message_id': '2', 'command': 'players/cmd/stop', 'args': {'player_id': 'onkyo'}})
+        self.assertEqual((await ws.receive_json(timeout=2))['result'], {'ok': True})
+        self.assertEqual(self.calls[-1], {'message_id': '2', 'command': 'players/cmd/stop', 'args': {'player_id': 'onkyo'}})
+        await ws.close()
+
     async def test_multiple_tablets_keep_request_ids_separate(self):
         a, _ = await self.connect()
         b, _ = await self.connect()
@@ -121,6 +134,7 @@ class BackendTests(unittest.IsolatedAsyncioTestCase):
     async def test_rejects_config_commands_auth_and_impersonation(self):
         cases = [
             {'command': 'config/get', 'args': {}},
+            {'command': 'config/players', 'args': {'include_values': True}},
             {'command': 'auth', 'args': {'token': 'browser-token'}},
             {'command': 'players/all', 'args': {'impersonate_user': 'admin'}},
             {'command': 'player_queues/play_media', 'args': {'media': 'x', 'option': 'add', 'shuffle': False}},

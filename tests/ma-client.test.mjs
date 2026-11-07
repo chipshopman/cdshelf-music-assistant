@@ -29,7 +29,7 @@ test('authenticates before listing players; token never enters URL; no playback 
   assert.equal((await client.players())[0].player_id, 'onkyo');
   const socket = FakeSocket.instances.at(-1);
   assert.equal(socket.url, 'ws://host:8095/ws');
-  assert.deepEqual(socket.sent.map(m => m.command), ['auth', 'players/all']);
+  assert.deepEqual(socket.sent.map(m => m.command), ['auth', 'players/all', 'config/players']);
   assert.equal(typeof socket.sent[0].message_id, 'string');
   assert.equal(socket.sent[0].args.token, 'secret'); client.disconnect();
 });

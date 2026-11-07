@@ -1,3 +1,4 @@
+import { playerName, playerProtocol, playerLabels } from './players.js';
 import { MusicAssistantClient, managedEndpoints } from './ma-client.js';
 import { AlbumShelf } from './shelf.js';
 const $ = id => document.getElementById(id);
@@ -35,7 +36,7 @@ $('remember').onchange = () => {
 };
 function describePlayer() {
   const player = players.find(p => p.player_id === $('player').value);
-  $('player-detail').textContent = player ? `${player.name || player.player_id} · ${player.available === false ? 'Currently unavailable. Check the receiver or speaker is online.' : 'Ready for album playback.'}` : '';
+  $('player-detail').textContent = player ? `${playerName(player)} · ${playerProtocol(player)} · ${player.available === false ? 'Currently unavailable. Check the receiver or speaker is online.' : 'Ready for album playback.'}` : '';
   shelf.playerChanged();
   write(localStorage, 'cdshelf.player', $('player').value);
 }
@@ -45,14 +46,16 @@ async function loadPlayers() {
   players = result;
   const selected = $('player').value || read(localStorage, 'cdshelf.player');
   $('player').replaceChildren();
-  for (const player of players) {
+  const labels = playerLabels(players);
+  for (const [index, player] of players.entries()) {
     const option = document.createElement('option'); option.value = player.player_id;
-    option.textContent = `${player.name || player.player_id}${player.available === false ? ' · unavailable' : ''}`;
+    option.textContent = labels[index];
     $('player').append(option);
   }
   if (players.some(p => p.player_id === selected)) $('player').value = selected;
   $('player').disabled = !players.length;
   describePlayer();
+  if (client.playerNamesAvailable === false) $('player-detail').textContent += ' Saved names could not be read; showing live player names.';
   if (!players.length) $('player-detail').textContent = 'No players found. Add a player provider in Music Assistant, then refresh.';
 }
 async function connect() {

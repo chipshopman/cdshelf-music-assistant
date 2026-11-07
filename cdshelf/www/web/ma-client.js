@@ -1,3 +1,4 @@
+import { mergePlayerNames } from './players.js';
 // Preserve Home Assistant's per-installation Ingress prefix for every request.
 export function managedEndpoints(baseURI) {
   const socket = new URL('api/ws', baseURI);
@@ -86,7 +87,20 @@ export class MusicAssistantClient {
     clearTimeout(entry.timer); this.pending.delete(message_id);
     entry.resolve(entry.chunks.length ? [...entry.chunks, ...(Array.isArray(data.result) ? data.result : [data.result])] : data.result);
   }
-  players() { return this.request('players/all'); }
+  async players() {
+    const [players, configs] = await Promise.all([
+      this.request('players/all'),
+      this.request('config/players', { include_values: false }, { timeout: 4000 }).catch(() => null),
+    ]);
+    if (!Array.isArray(players)) throw new Error('Unexpected player response from Music Assistant.');
+    this.playerNamesAvailable = Array.isArray(configs);
+    return mergePlayerNames(players, configs);
+  }
+  stopPlayer(playerId) {
+    if (!playerId) return Promise.reject(new Error('Choose a listening room first.'));
+    // Music Assistant redirects this command to the active queue/group when needed.
+    return this.request('players/cmd/stop', { player_id: playerId });
+  }
   albumPage(offset = 0, limit = 200) {
     return this.request('music/albums/library_items', { offset, limit, order_by: 'sort_name', summary: false });
   }

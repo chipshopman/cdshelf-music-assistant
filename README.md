@@ -23,6 +23,8 @@ The root `index.html` connects to your Music Assistant server and displays your 
 - Retains player selection for Onkyo, Denon and Sonos destinations already configured in Music Assistant.
 - Fetches multidisc track listings and resolves the selected player's active queue before playback.
 - No playback on connect, room selection, refresh or opening an album.
+- Put back stops the selected device or its active group before closing the CD; search and browsing leave playback running.
+- Player labels show the connection protocol; Refresh players reads saved custom names where the token permits it.
 
 The shelf's expanding jewel-case treatment is adapted from CD Shelf 0.7.6. Printed spines are simulated from cover artwork and metadata. Pause/skip/volume remain in Music Assistant for this stage.
 
