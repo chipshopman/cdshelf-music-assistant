@@ -32,3 +32,12 @@ body.auto-connecting #connection-form{display:none}
 
 /* Ingress owns authentication; there is no browser token setup in this mode. */
 body[data-managed=true] #connection-form,body[data-managed=true] #forget-connection{display:none!important}
+
+.app-header{flex-wrap:wrap}
+.display-tools{display:flex;gap:10px;align-items:center;margin-left:auto;flex-wrap:wrap}
+.display-tools a{display:inline-flex;align-items:center;justify-content:center;padding:12px 16px;border-radius:8px;min-height:44px;text-decoration:none;font-size:14px;font-weight:650}
+.display-tools button{min-height:44px;font-size:14px}
+.display-tools a:focus-visible{outline:2px solid #c3d8a8;outline-offset:3px}
+#display-status{font-size:14px;color:#c3d8a8}
+html:fullscreen{overflow:auto;background:#131514}
+@media(max-width:600px){.display-tools{width:100%;margin-left:0}.display-tools>*{flex:1}}

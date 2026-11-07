@@ -1,7 +1,9 @@
+import { setupDisplayMode } from './display.js';
 import { playerName, playerProtocol, playerLabels } from './players.js';
 import { MusicAssistantClient, managedEndpoints } from './ma-client.js';
 import { AlbumShelf } from './shelf.js';
 const $ = id => document.getElementById(id);
+setupDisplayMode();
 const status = (text, kind = '') => { $('status').textContent = text; $('status').dataset.kind = kind; };
 const read = (storage, key) => { try { return storage.getItem(key) || ''; } catch { return ''; } };
 const write = (storage, key, value) => { try { value ? storage.setItem(key, value) : storage.removeItem(key); } catch {} };

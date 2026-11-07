@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.2
+
+- Full screen control shows CD Shelf alone, with an exit button and browser exit support.
+- Open on its own opens the existing Ingress page in a separate tab without Home Assistant's header/sidebar.
+- Keeps server-side authentication and does not expose an extra network port.
+- Explains what to try when a browser blocks embedded full-screen requests.
+
 ## 0.1.1
 
 - Device labels show player names and provider/output protocols, with IDs where needed to distinguish otherwise identical entries.

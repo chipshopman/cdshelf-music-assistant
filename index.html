@@ -6,7 +6,8 @@
 </head>
 <body>
 <main>
-  <header><span class="mark" aria-hidden="true">◉</span><div><h1>CD Shelf</h1><p>Your collection. Back on the shelf.</p></div></header>
+  <header class="app-header"><span class="mark" aria-hidden="true">◉</span><div><h1>CD Shelf</h1><p>Your collection. Back on the shelf.</p></div><nav class="display-tools" aria-label="Display options"><a id="open-standalone" class="quiet" target="_blank" rel="noopener" hidden>Open on its own</a><button id="fullscreen" class="quiet" type="button" aria-pressed="false">Full screen</button></nav></header>
+  <p id="display-status" role="status" hidden></p>
 <section id="shelf" hidden aria-labelledby="shelf-heading">
   <div class="shelf-heading"><div><span class="eyebrow">YOUR MUSIC, WITH A LITTLE MORE SOUL</span><h2 id="shelf-heading">The collection</h2></div><button id="reload-albums" class="quiet" type="button">Refresh albums</button></div>
   <div class="shelf-tools"><div><label for="album-search">Find an album or artist</label><input id="album-search" type="search" placeholder="Search your collection…"></div><div><label for="album-sort">Shelf order</label><select id="album-sort"><option value="artist">Artist, then album</option><option value="title">Album title</option></select></div></div>

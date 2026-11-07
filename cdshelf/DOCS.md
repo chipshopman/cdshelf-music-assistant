@@ -1,6 +1,6 @@
 # Set up CD Shelf in Home Assistant
 
-This is the first **experimental** Home Assistant app/add-on release, version **0.1.1**, targeting Music Assistant **2.10.9**. The backend has been tested with a simulated Music Assistant server, including real HTTP/WebSocket connections and multiple screens. A container build and a real Home Assistant OS installation have not yet been verified. Keep the existing PC version available during this first installation.
+This is the first **experimental** Home Assistant app/add-on release, version **0.1.2**, targeting Music Assistant **2.10.9**. The backend has been tested with a simulated Music Assistant server, including real HTTP/WebSocket connections and multiple screens. A container build and a real Home Assistant OS installation have not yet been verified. Keep the existing PC version available during this first installation.
 
 ## Install
 
@@ -18,6 +18,14 @@ This is the first **experimental** Home Assistant app/add-on release, version **
 7. Choose the playback device in **Play on** (names include the provider/protocol), open a CD and press its triangle or **Play album**. Opening CD Shelf or a cover does not start music. Play replaces the selected device's queue.
 
 On a tablet, sign in to your usual Home Assistant address or Companion app and choose **CD Shelf** in the sidebar. No Python server on the PC is needed. Each browser remembers its playback device. Home Assistant Ingress handles access; non-admin users can see the sidebar entry because `panel_admin` is false. This does not give them access to the app's configuration.
+
+## See just CD Shelf
+
+At the top of CD Shelf, select **Full screen**. Where the browser permits it, this displays CD Shelf alone, hiding Home Assistant's sidebar/header and browser controls. Use **Exit full screen**, Escape on a keyboard, or your browser's exit gesture to return. Full-screen requires a tap each time; browsers do not permit automatic entry on page load, and some browsers/Companion app WebViews restrict this feature.
+
+Alternatively, select **Open on its own** while inside Home Assistant. This opens the current Ingress page in a separate browser tab, with no Home Assistant navigation around it. You can then use Full screen there. The new tab still uses Home Assistant Ingress authentication and the centrally configured Music Assistant token; no token entry or extra exposed port is needed. The link is shown only when CD Shelf is embedded.
+
+The separate tab uses the current Ingress session URL, not a permanent public address. If that session expires or access is refused later, open CD Shelf from the Home Assistant sidebar again and select Open on its own to get the current session. Do not rely on a saved Ingress URL as a permanent home-screen shortcut.
 
 ## Configuration
 

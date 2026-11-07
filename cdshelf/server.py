@@ -84,7 +84,7 @@ def create_app(options, *, allowed_peers=frozenset({'172.30.32.2'}), root=ROOT):
 
     async def static(request):
         name = request.match_info['name']
-        if name not in {'connection.js', 'connection.css', 'shelf.js', 'shelf.css', 'ma-client.js', 'library.js', 'players.js'}:
+        if name not in {'connection.js', 'connection.css', 'shelf.js', 'shelf.css', 'ma-client.js', 'library.js', 'players.js', 'display.js'}:
             raise web.HTTPNotFound()
         return web.FileResponse(root / 'web' / name)
 

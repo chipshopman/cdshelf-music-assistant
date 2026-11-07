@@ -62,3 +62,5 @@ The extracted **0.7.6** LMS source is in `CDShelf/`. It requires Lyrion Music Se
 Run `npm run prepare-addon` after frontend changes so the Home Assistant package stays in sync. Run `npm test` with Node.js 20+. No dependency installation is required. Tests cover the string-ID connection regression, paginated libraries, missing artwork, search and playback targeting. These use simulated responses; real library/artwork/playback verification against Steve's server is still required.
 
 Backend checks use Python 3.12+ and the dependency in `cdshelf/requirements.txt`: `python -m unittest discover -s tests -p 'test_*.py' -v`. They cover real local HTTP/WebSockets, server-only authentication, restricted commands, concurrent screens, partial results, artwork, disconnected upstreams and Ingress peer enforcement.
+
+Use **Full screen** at the top for a clean CD Shelf view, or **Open on its own** to open the current Ingress session in a separate tab without Home Assistant navigation. Browser full-screen support and session lifetime still apply.
