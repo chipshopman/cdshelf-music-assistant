@@ -12,7 +12,8 @@ export function websocketAddress(value, pageProtocol = '') {
 // MA 2.10.9: server greeting, auth command, then request/response messages.
 // Keep tokens out of URLs, logs and error messages.
 export class MusicAssistantClient {
-  constructor({ WebSocketImpl = globalThis.WebSocket, timeout = 12000, onDisconnect = () => {} } = {}) {
+  constructor({ WebSocketImpl = globalThis.WebSocket, timeout = 12000, trackTimeout = 60000, onDisconnect = () => {} } = {}) {
+    this.trackTimeout = trackTimeout; this.trackCache = new Map(); this.trackRequests = new Map();
     this.WebSocketImpl = WebSocketImpl; this.timeout = timeout; this.onDisconnect = onDisconnect;
     this.pending = new Map(); this.sequence = 0; this.socket = null;
   }
@@ -38,6 +39,7 @@ export class MusicAssistantClient {
       socket.onclose = () => {
         if (this.socket !== socket) return;
         this.socket = null;
+        this.clearTrackCache();
         this.rejectPending(new Error('Music Assistant disconnected. Connect again to continue.'));
         this.onDisconnect();
       };
@@ -45,12 +47,12 @@ export class MusicAssistantClient {
       return info;
     } catch (error) { this.disconnect(); throw error; }
   }
-  request(command, args = {}) {
+  request(command, args = {}, { timeout = this.timeout } = {}) {
     if (!this.socket || this.socket.readyState !== 1) return Promise.reject(new Error('Connect to Music Assistant first.'));
     // Music Assistant uses string request IDs; its replies must match our Map keys.
     const message_id = String(++this.sequence);
     return new Promise((resolve, reject) => {
-      const timer = setTimeout(() => { this.pending.delete(message_id); reject(new Error('Music Assistant did not respond in time. Try connecting again.')); }, this.timeout);
+      const timer = setTimeout(() => { this.pending.delete(message_id); reject(new Error(command === 'music/albums/album_tracks' ? 'Music Assistant is taking too long to return the tracks. Close and reopen this album to retry; you can still use Play album.' : 'Music Assistant did not respond in time. Try connecting again.')); }, timeout);
       this.pending.set(message_id, { resolve, reject, timer, chunks: [], command });
       try { this.socket.send(JSON.stringify({ message_id, command, args })); }
       catch { clearTimeout(timer); this.pending.delete(message_id); reject(new Error('Could not send the request to Music Assistant.')); }
@@ -73,8 +75,31 @@ export class MusicAssistantClient {
   albumPage(offset = 0, limit = 200) {
     return this.request('music/albums/library_items', { offset, limit, order_by: 'sort_name', summary: false });
   }
-  albumTracks(album) {
-    return this.request('music/albums/album_tracks', { item_id: String(album.item_id), provider_instance_id_or_domain: album.provider || 'library' });
+  async albumTracks(album) {
+    const provider = album.provider || 'library';
+    const key = JSON.stringify([provider, String(album.item_id)]);
+    if (this.trackCache.has(key)) return this.trackCache.get(key).slice();
+    let request = this.trackRequests.get(key);
+    if (!request) {
+      request = this.request('music/albums/album_tracks', {
+        item_id: String(album.item_id), provider_instance_id_or_domain: provider,
+      }, { timeout: this.trackTimeout }).then(tracks => {
+        if (!Array.isArray(tracks)) throw new Error('Unexpected track-list response.');
+        // Ignore results from before a refresh or disconnection.
+        if (this.trackRequests.get(key) === request && tracks.length) {
+          if (this.trackCache.size >= 100) this.trackCache.delete(this.trackCache.keys().next().value);
+          this.trackCache.set(key, tracks.slice());
+        }
+        return tracks;
+      }).finally(() => {
+        if (this.trackRequests.get(key) === request) this.trackRequests.delete(key);
+      });
+      this.trackRequests.set(key, request);
+    }
+    return (await request).slice();
+  }
+  clearTrackCache() {
+    this.trackCache.clear(); this.trackRequests.clear();
   }
   async playAlbum(album, playerId) {
     if (!playerId) throw new Error('Choose a listening room first.');
@@ -85,6 +110,7 @@ export class MusicAssistantClient {
   }
   rejectPending(error) { for (const entry of this.pending.values()) { clearTimeout(entry.timer); entry.reject(error); } this.pending.clear(); }
   disconnect() {
+    this.clearTrackCache();
     const socket = this.socket; this.socket = null;
     if (socket) { socket.onclose = null; socket.close(); }
     this.rejectPending(new Error('Disconnected.'));
