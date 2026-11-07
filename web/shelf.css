@@ -18,7 +18,10 @@ body.has-shelf main{padding-bottom:24px}
 .shelf-controls button,#alphabet button{min-height:44px}
 #alphabet button{min-width:36px}
 .shelf-help{margin:14px 0}
-.cover-play{position:absolute;z-index:4;left:50%;top:50%;transform:translate(-50%,-50%);width:72px;height:72px;border-radius:50%;padding:0 0 0 5px;font-size:32px;background:#152011df;color:#fff;border:2px solid #e6f2da;box-shadow:0 4px 24px #0009;touch-action:manipulation}
+.cover-play{position:absolute;z-index:4;right:8px;bottom:8px;width:56px;height:56px;border-radius:0;padding:0;font-size:36px;line-height:1;background:transparent;color:rgb(255 255 255 / 65%);border:0;box-shadow:none;text-shadow:0 1px 4px #0009;touch-action:manipulation}
+.cover-play:focus-visible{color:rgb(255 255 255 / 90%)}
+@media(hover:hover){.cover-play:hover:not(:disabled){color:rgb(255 255 255 / 90%)}}
+.face-cover-container .case-label{padding-right:72px}
 .cover-play:disabled{cursor:default}
 .cover-play:focus-visible{outline-offset:5px}
 @media(max-width:1100px){.shelf-controls{grid-template-columns:1fr 1fr}.shelf-paging{grid-row:2;grid-column:1/-1}.device-picker{justify-self:end;width:min(100%,300px)}.below-shelf{grid-template-columns:minmax(0,1fr) minmax(300px,360px)}}
