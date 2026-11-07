@@ -16,6 +16,7 @@ export class AlbumShelf {
     $('spine-frame').onkeydown = event => { if (event.key === 'Escape') this.closeAlbum(); };
   }
   async load(address) {
+    this.client.clearTrackCache();
     const generation = ++this.generation; this.address = address;
     this.closeAlbum(); this.albums = []; this.filtered = []; this.page = 0;
     $('rack').replaceChildren(); $('alphabet').replaceChildren(); $('shelf-empty').hidden = true;
