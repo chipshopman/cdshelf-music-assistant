@@ -87,8 +87,12 @@ export class AlbumShelf {
     const thumbnail = artworkUrl(album, this.address, 160); const coverUrl = artworkUrl(album, this.address, 512);
     if (thumbnail) { const img = node('img'); img.src = thumbnail; img.loading = 'lazy'; img.alt = ''; img.onerror = () => img.remove(); spine.append(img); }
     spine.append(node('span', 'spine-text', title), node('span', 'spine-glass-overlay'));
-    const cover = node('div', 'face-cover-container'); cover.setAttribute('aria-hidden', 'true');
+    const cover = node('div', 'face-cover-container'); cover.setAttribute('aria-hidden', 'true'); cover.inert = true;
     const fallback = node('div', 'cover-fallback'); fallback.append(node('strong', '', album.name || 'Untitled album'), node('small', '', artistName(album))); cover.append(fallback);
+    const playCover = node('button', 'cover-play', '▶'); playCover.type = 'button';
+    playCover.setAttribute('aria-label', `Play ${title}`); playCover.title = 'Play album'; playCover.disabled = true;
+    playCover.onclick = () => { if (this.selected === album) this.play(); };
+    cover.append(playCover);
     // Full-size artwork is loaded only when this case is opened.
     box.append(spine, cover);
     spine.onclick = () => this.openAlbum(album, box, coverUrl, title);
@@ -101,12 +105,14 @@ export class AlbumShelf {
   }
   closeAlbum() {
     this.selectionGeneration++; this.selected = null; $('album-detail').hidden = true;
-    for (const box of $('rack').children) { box.classList.remove('expanded'); const button = box.querySelector('button'); button?.setAttribute('aria-expanded', 'false'); if (button) button.tabIndex = 0; }
+    $('close-album').disabled = true; this.playerChanged();
+    for (const box of $('rack').children) { box.classList.remove('expanded'); const cover = box.querySelector('.face-cover-container'); cover.inert = true; cover.setAttribute('aria-hidden', 'true'); const button = box.querySelector('button'); button?.setAttribute('aria-expanded', 'false'); if (button) button.tabIndex = 0; }
   }
   async openAlbum(album, box, coverUrl, title) {
     this.closeAlbum(); const generation = this.selectionGeneration; this.selected = album;
     box.classList.add('expanded'); box.querySelector('button').setAttribute('aria-expanded', 'true');
-    const cover = box.querySelector('.face-cover-container');
+    const cover = box.querySelector('.face-cover-container'); cover.inert = false; cover.setAttribute('aria-hidden', 'false');
+    $('close-album').disabled = false;
     if (coverUrl && !cover.querySelector('img')) { const img = node('img'); img.alt = ''; img.src = coverUrl; img.onerror = () => img.remove(); cover.append(img, node('span', 'jewel-case-overlay'), node('span', 'case-label', title)); }
     this.centre(box); setTimeout(() => { if (this.selected === album) this.centre(box); }, 360);
     $('album-detail').hidden = false; $('album-title').textContent = album.name || 'Untitled album';
@@ -129,8 +135,10 @@ export class AlbumShelf {
   }
   playerChanged() {
     const player = this.getPlayer();
-    $('play-destination').textContent = player ? `On ${player.name || player.player_id}${player.available === false ? ' · unavailable' : ''}` : 'Choose a listening room above.';
-    $('play-album').disabled = this.playingRequest || !player || player.available === false || !this.selected;
+    $('play-destination').textContent = player ? `On ${player.name || player.player_id}${player.available === false ? ' · unavailable' : ''}` : 'Choose a device using Play on.';
+    const disabled = this.playingRequest || !player || player.available === false || !this.selected;
+    $('play-album').disabled = disabled;
+    for (const button of $('rack').querySelectorAll('.cover-play')) button.disabled = disabled || !button.closest('.cd-box').classList.contains('expanded');
   }
   async play() {
     const album = this.selected, player = this.getPlayer();

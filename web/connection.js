@@ -22,7 +22,7 @@ $('reveal').onclick = () => {
 $('remember').onchange = () => { if (!$('remember').checked) write(sessionStorage, 'cdshelf.token', ''); };
 function describePlayer() {
   const player = players.find(p => p.player_id === $('player').value);
-  $('player-detail').textContent = player ? (player.available === false ? 'Currently unavailable. Check the receiver or speaker is online.' : 'Ready for album playback.') : '';
+  $('player-detail').textContent = player ? `${player.name || player.player_id} · ${player.available === false ? 'Currently unavailable. Check the receiver or speaker is online.' : 'Ready for album playback.'}` : '';
   shelf.playerChanged();
   write(localStorage, 'cdshelf.player', $('player').value);
 }
