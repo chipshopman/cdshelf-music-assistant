@@ -2,13 +2,23 @@
 
 A Music Assistant adaptation of CD Shelf, targeting server **2.10.9**.
 
-## First preview: connection screen
+## Shelf preview
 
-The new root `index.html` connects to your Music Assistant server, authenticates using a Music Assistant access token and lists its players. This is a connection preview; album browsing and playback are not implemented yet.
+The root `index.html` connects to your Music Assistant server and displays your library as a shelf of CD spines. Swipe or scroll along the shelf, tap a spine to pull out the cover and view the track list, then select **Play album** to play through the chosen room. Playback replaces that room's queue and starts the album in track order.
 
-**[Start here: run and test the connection screen](CONNECTION-PREVIEW.md)**
+- Loads the complete library in batches; no 300-album cap.
+- Search by artist/title/version, sort by artist or album, and jump by letter.
+- Shows 150 cases per shelf page to keep tablet rendering manageable; alphabet jumps and search cover the entire loaded collection.
+- Loads full-size covers only when selected; missing art gets a readable fallback.
+- Retains player selection for Onkyo, Denon and Sonos destinations already configured in Music Assistant.
+- Fetches multidisc track listings and resolves the selected player's active queue before playback.
+- No playback on connect, room selection, refresh or opening an album.
 
-No build tools or npm packages are needed to run the screen. Serve this folder with Python's HTTP server and open it in a browser. The original LMS source under `CDShelf/` and archives under `releases/` are unchanged.
+The shelf's expanding jewel-case treatment is adapted from CD Shelf 0.7.6. Printed spines are simulated from cover artwork and metadata. Pause/skip/volume remain in Music Assistant for this stage.
+
+**[Start here: run and test the shelf](CONNECTION-PREVIEW.md)**
+
+No build tools or npm packages are needed to run the screen. Serve this folder with Python's HTTP server and open it in a browser. When updating an existing local copy, replace the root `index.html` and the entire `web/` folder, then hard-refresh the browser. The original LMS source under `CDShelf/` and archives under `releases/` are unchanged.
 
 ## Attribution
 
@@ -29,4 +39,4 @@ The extracted **0.7.6** LMS source is in `CDShelf/`. It requires Lyrion Music Se
 
 ## Development checks
 
-Run `npm test` with Node.js 20+. No dependency installation is required. Tests simulate the Music Assistant connection; verification against a real server is still needed.
+Run `npm test` with Node.js 20+. No dependency installation is required. Tests cover the string-ID connection regression, paginated libraries, missing artwork, search and playback targeting. These use simulated responses; real library/artwork/playback verification against Steve's server is still required.

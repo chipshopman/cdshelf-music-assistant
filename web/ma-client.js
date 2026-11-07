@@ -51,7 +51,7 @@ export class MusicAssistantClient {
     const message_id = String(++this.sequence);
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => { this.pending.delete(message_id); reject(new Error('Music Assistant did not respond in time. Try connecting again.')); }, this.timeout);
-      this.pending.set(message_id, { resolve, reject, timer, chunks: [] });
+      this.pending.set(message_id, { resolve, reject, timer, chunks: [], command });
       try { this.socket.send(JSON.stringify({ message_id, command, args })); }
       catch { clearTimeout(timer); this.pending.delete(message_id); reject(new Error('Could not send the request to Music Assistant.')); }
     });
@@ -62,13 +62,27 @@ export class MusicAssistantClient {
     const entry = this.pending.get(message_id); if (!entry) return;
     if (data.error_code !== undefined) {
       clearTimeout(entry.timer); this.pending.delete(message_id);
-      entry.reject(new Error('Music Assistant rejected the request. Check that your token is valid and has permission to read players.')); return;
+      const action = entry.command === 'auth' ? 'sign-in' : entry.command.startsWith('music/') ? 'library request' : entry.command.startsWith('player_queues/') ? 'playback request' : 'player request';
+      entry.reject(new Error(`Music Assistant rejected the ${action}. Check that your token is valid and has the required library, player or playback permissions.`)); return;
     }
     if (data.partial) { entry.chunks.push(...(Array.isArray(data.result) ? data.result : [data.result])); return; }
     clearTimeout(entry.timer); this.pending.delete(message_id);
     entry.resolve(entry.chunks.length ? [...entry.chunks, ...(Array.isArray(data.result) ? data.result : [data.result])] : data.result);
   }
   players() { return this.request('players/all'); }
+  albumPage(offset = 0, limit = 200) {
+    return this.request('music/albums/library_items', { offset, limit, order_by: 'sort_name', summary: false });
+  }
+  albumTracks(album) {
+    return this.request('music/albums/album_tracks', { item_id: String(album.item_id), provider_instance_id_or_domain: album.provider || 'library' });
+  }
+  async playAlbum(album, playerId) {
+    if (!playerId) throw new Error('Choose a listening room first.');
+    const queue = await this.request('player_queues/get_active_queue', { player_id: playerId });
+    if (!queue?.queue_id) throw new Error('No playback queue is available for this room. Check the player in Music Assistant.');
+    const uri = album.uri || `${album.provider || 'library'}://album/${album.item_id}`;
+    return this.request('player_queues/play_media', { queue_id: queue.queue_id, media: uri, option: 'replace', shuffle: false });
+  }
   rejectPending(error) { for (const entry of this.pending.values()) { clearTimeout(entry.timer); entry.reject(error); } this.pending.clear(); }
   disconnect() {
     const socket = this.socket; this.socket = null;

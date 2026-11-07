@@ -1,14 +1,17 @@
 import { MusicAssistantClient } from './ma-client.js';
+import { AlbumShelf } from './shelf.js';
 const $ = id => document.getElementById(id);
 const status = (text, kind = '') => { $('status').textContent = text; $('status').dataset.kind = kind; };
 const read = (storage, key) => { try { return storage.getItem(key) || ''; } catch { return ''; } };
 const write = (storage, key, value) => { try { value ? storage.setItem(key, value) : storage.removeItem(key); } catch {} };
 let players = [], busy = false;
 function disconnected() {
+  shelf.reset();
   $('connected').hidden = true; $('disconnect').hidden = true; $('connect').disabled = false;
   status('Disconnected. Connect again when you are ready.');
 }
 const client = new MusicAssistantClient({ onDisconnect: disconnected });
+const shelf = new AlbumShelf(client, () => players.find(player => player.player_id === $('player').value));
 $('server').value = read(localStorage, 'cdshelf.server');
 $('token').value = read(sessionStorage, 'cdshelf.token');
 $('remember').checked = Boolean($('token').value);
@@ -19,7 +22,8 @@ $('reveal').onclick = () => {
 $('remember').onchange = () => { if (!$('remember').checked) write(sessionStorage, 'cdshelf.token', ''); };
 function describePlayer() {
   const player = players.find(p => p.player_id === $('player').value);
-  $('player-detail').textContent = player ? (player.available === false ? 'Currently unavailable. Check the receiver or speaker is online.' : 'Player found. No playback commands have been sent.') : '';
+  $('player-detail').textContent = player ? (player.available === false ? 'Currently unavailable. Check the receiver or speaker is online.' : 'Ready for album playback.') : '';
+  shelf.playerChanged();
   write(localStorage, 'cdshelf.player', $('player').value);
 }
 async function loadPlayers() {
@@ -41,6 +45,7 @@ async function loadPlayers() {
 $('connection-form').onsubmit = async event => {
   event.preventDefault(); if (busy) return; busy = true;
   $('connect').disabled = true; $('connected').hidden = true; $('disconnect').hidden = true;
+  shelf.reset();
   write(sessionStorage, 'cdshelf.token', '');
   status('Connecting and checking your access token…');
   try {
@@ -51,6 +56,8 @@ $('connection-form').onsubmit = async event => {
     $('server-detail').textContent = `Music Assistant ${info.server_version}${info.server_version !== '2.10.9' ? ' · this preview targets 2.10.9; other versions have not been verified' : ''}`;
     $('connected').hidden = false; $('disconnect').hidden = false;
     status(`Connected · ${players.length} player${players.length === 1 ? '' : 's'} found.`, 'success');
+    document.body.classList.remove('connection-editing');
+    shelf.load($('server').value.trim());
   } catch (error) { client.disconnect(); status(error.message, 'error'); }
   finally { busy = false; $('connect').disabled = false; }
 };
@@ -63,3 +70,7 @@ $('refresh').onclick = async () => {
 };
 $('disconnect').onclick = () => { client.disconnect(); write(sessionStorage, 'cdshelf.token', ''); $('token').value = ''; disconnected(); };
 window.addEventListener('pagehide', () => client.disconnect());
+const editConnection = document.createElement('button');
+editConnection.type = 'button'; editConnection.className = 'quiet connection-toggle'; editConnection.textContent = 'Connection settings';
+editConnection.onclick = () => document.body.classList.toggle('connection-editing');
+$('connected').append(editConnection);

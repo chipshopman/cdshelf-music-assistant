@@ -1,6 +1,6 @@
-# Music Assistant connection preview
+# Music Assistant CD Shelf preview
 
-Targets Music Assistant server **2.10.9**. This first step verifies connection, authentication and player discovery. It does not yet browse albums or play music. The original `CDShelf/` source is preserved.
+Targets Music Assistant server **2.10.9**. The preview connects, loads albums, opens covers and track listings, and plays the selected album on your chosen player. The original `CDShelf/` source is preserved.
 
 ## Run on Windows
 
@@ -10,7 +10,13 @@ Targets Music Assistant server **2.10.9**. This first step verifies connection, 
 4. Open **http://127.0.0.1:8080** in your browser. Do not open index.html directly from File Explorer: it uses JavaScript modules.
 5. Enter Music Assistant's direct address, for example `http://192.168.1.50:8095`. Check that this address opens Music Assistant in another tab. The Home Assistant sidebar/Ingress URL is not the direct server address.
 6. Enter a **Music Assistant** access token generated in Music Assistant's user/profile settings. A Home Assistant long-lived token is not interchangeable. Use an account allowed to read players. Never commit or send the token to GitHub or chat.
-7. Click **Connect**. The screen should report the server version and list players, including the Onkyo if configured. Choosing a player does not change playback.
+7. Click **Connect**. The screen should report the server version, list players and load your album collection below. Choose your intended listening room (for example the Onkyo).
+8. Swipe or scroll the spines. Tap a spine to reveal the cover and its track list. Use search, alphabetical jumps or Previous/Next shelf to move through larger collections.
+9. Press **Play album** when ready. This replaces the selected room's queue and plays the album in track order. Connecting, choosing a player and opening a cover do not change playback.
+
+For an existing local copy: replace the root `index.html` and the complete `web/` folder from the latest repository ZIP. Keep the Python server running, then press **Ctrl+F5** in your browser. Your browser's saved address and player selection stay available.
+
+The token needs permission to read the library and players, read queues and control playback. A read-only token may connect successfully but be unable to start an album. Track listings are informational in this preview; use Music Assistant for pause/skip/volume controls.
 
 On Linux, use `python3 -m http.server 8080 --bind 127.0.0.1` instead.
 
