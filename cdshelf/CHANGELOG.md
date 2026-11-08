@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.4
+
+- Add a custom enforcing `apparmor.txt` for the Python Alpine runtime, Docker init, Ingress/network connections, read-only frontend and `/data/options.json`.
+- Explicitly keep AppArmor enabled; no additional capabilities, host mounts, host networking or general shell/file-write permissions.
+- Disable Python bytecode writes and use an absolute interpreter entrypoint so runtime code stays read-only.
+- Add real-parser checks for Supervisor-renamed profiles and permission-regression checks.
+- Document remaining Home Assistant OS enforcement/audit-log checks in APPARMOR.md before public-release validation. The app remains experimental.
+
 ## 0.1.3
 
 - Red-team review: prevent superseded or cancelled connection attempts from closing/authenticating through a newer connection.

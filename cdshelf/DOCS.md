@@ -1,6 +1,6 @@
 # Set up CD Shelf in Home Assistant
 
-This is the first **experimental** Home Assistant app/add-on release, version **0.1.3**, targeting Music Assistant **2.10.9**. The backend has been tested with a simulated Music Assistant server, including real HTTP/WebSocket connections and multiple screens. Steve has reported the Home Assistant installation and clean display working. Release 0.1.3 needs checking on that live installation after updating; automated tests do not replace that check. Keep the existing PC version available during this first installation.
+This is the first **experimental** Home Assistant app/add-on release, version **0.1.4**, targeting Music Assistant **2.10.9**. The backend has been tested with a simulated Music Assistant server, including real HTTP/WebSocket connections and multiple screens. Steve has reported the Home Assistant installation and clean display working. Release 0.1.4 needs checking on that live installation after updating; automated tests do not replace that check. Keep the existing PC version available during this first installation.
 
 ## Install
 
@@ -46,6 +46,12 @@ Save changed settings and restart CD Shelf to apply them. The backend reads `/da
 - CD Shelf exposes no host port, does not need host networking, a Supervisor API token or access to Home Assistant configuration files. Its web server accepts only the Supervisor Ingress proxy's TCP address, not user-supplied forwarding headers.
 - The bridge allows only the library/player/playback commands this UI uses, including Stop, plus an optional player-name configuration read. That read returns only player IDs, names and default names; configuration values are stripped server-side. All other configuration commands, browser-supplied authentication and impersonation arguments are rejected. Authentication responses and unrelated upstream events are not passed to browsers.
 - The original standalone version keeps its separate browser-storage connection option; its existing saved token is not needed by this Home Assistant version. You may use **Forget connection** in the old PC version if you no longer need it.
+
+## AppArmor and publishing
+
+Version 0.1.4 includes a custom enforcing AppArmor profile, automatically loaded by Supervisor from `apparmor.txt`. AppArmor remains explicitly enabled and Protection mode can stay on. Code and options are read-only to the app; no general shell execution, capabilities or host mounts are requested. This image uses Docker init and Python, so it deliberately does not copy the S6/Bashio permissions from the Home Assistant example.
+
+The profile has been compiled and checked locally, including Supervisor-style profile names. **Enforcement under a running Home Assistant OS container still needs validation before public release.** See [the AppArmor permissions and validation guide](APPARMOR.md), including startup/shutdown, DNS/TLS and host audit-log checks. If the app fails to start or a feature fails after updating, check for AppArmor denial records rather than disabling protection.
 
 ## Troubleshooting
 

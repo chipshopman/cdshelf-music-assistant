@@ -1,0 +1,67 @@
+#include <tunables/global>
+
+# Supervisor replaces this one top-level name with <repository>_cdshelf.
+# This image uses Docker's init and Python 3.13, not S6/Bashio.
+profile cdshelf flags=(attach_disconnected,mediate_deleted) {
+  # Deliberately explicit rules rather than abstractions/base, whose inherited
+  # permissions include executable/writable private-home trees on some hosts.
+  /dev/null rw,
+  /dev/zero rw,
+  /dev/{random,urandom} r,
+
+  # HTTP/WebSocket server and client, HTTPS and DNS. No raw or packet sockets.
+  # The application's Ingress peer check still restricts inbound HTTP access.
+  network inet stream,
+  network inet6 stream,
+  network inet dgram,
+  network inet6 dgram,
+  # Python asyncio uses a local socketpair to wake its event loop.
+  network unix stream,
+
+  # Receive runtime stop signals. Docker init may forward them to Python in
+  # this same profile; it must not gain permission to signal other apps.
+  signal (receive),
+  signal (send) peer=@{profile_name},
+
+  # The only executable entry points: Docker init and the image's interpreter.
+  /sbin/docker-init rix,
+  /dev/init rix,
+  /usr/local/bin/python{,3,3.13} rix,
+
+  # musl/OpenSSL and Python modules, including native extension mappings.
+  /lib/** mr,
+  /usr/lib/** mr,
+  /usr/local/lib/** mr,
+
+  # App source/frontend and the administrator's token configuration: read only.
+  /app/ r,
+  /app/** r,
+  /data/ r,
+  /data/options.json r,
+
+  # Name resolution, TLS certificate validation, timezone and MIME lookup.
+  /etc/{hosts,hostname,resolv.conf,nsswitch.conf,gai.conf,services,protocols} r,
+  /etc/ssl/ r,
+  /etc/ssl/** r,
+  /usr/share/ca-certificates/** r,
+  /usr/local/share/ca-certificates/** r,
+  /etc/ld-musl-*.path r,
+  /etc/{passwd,group} r,
+  /usr/share/locale/** r,
+  /etc/localtime r,
+  /usr/share/zoneinfo/** r,
+  /etc/mime.types r,
+  /usr/local/etc/mime.types r,
+
+  # Runtime information used by Python/thread pools, with no process-memory
+  # access or writable host-system paths.
+  /proc/cpuinfo r,
+  /proc/meminfo r,
+  /proc/stat r,
+  /proc/[0-9]*/{maps,auxv,status,stat} r,
+  ptrace (read) peer=@{profile_name},
+  /sys/devices/system/cpu/{online,possible,present} r,
+
+  # No general file-write, shell execution, capabilities, mount, ptrace trace or
+  # access to the host's configuration, devices, Docker socket or NAS mounts.
+}

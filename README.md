@@ -66,3 +66,5 @@ Backend checks use Python 3.12+ and the dependency in `cdshelf/requirements.txt`
 Use **Full screen** at the top for a clean CD Shelf view, or **Open on its own** to open the current Ingress session in a separate tab without Home Assistant navigation. Browser full-screen support and session lifetime still apply.
 
 [Red-team review and fixes in 0.1.3](RED-TEAM-REVIEW.md).
+
+The custom AppArmor profile and its pre-publication validation steps are documented in [cdshelf/APPARMOR.md](cdshelf/APPARMOR.md). Parser checks pass; live kernel enforcement still needs validation on Home Assistant OS.

@@ -9,3 +9,5 @@ First experimental Home Assistant release, targeting Music Assistant **2.10.9**.
 Based on CD Shelf by ChrisHoppyBot, with LMS packaging/UI by Joe Leech. The original code's attribution is retained; no new licence is assigned by this adaptation.
 
 Use **Full screen** at the top for a clean CD Shelf view, or **Open on its own** to open the current Ingress session in a separate tab without Home Assistant navigation. Browser full-screen support and session lifetime still apply.
+
+Includes a custom enforcing AppArmor profile. Local syntax/package checks pass; validate runtime enforcement and host audit logs on Home Assistant OS before public release. See APPARMOR.md in the repository.
